@@ -89,7 +89,6 @@ export const LoadScene = () => {
       icon={LoadIcon}
       onSelect={handleSelect}
       data-testid="load-button"
-      shortcut={getShortcutFromShortcutName("loadScene")}
       aria-label={t("buttons.load")}
     >
       {t("buttons.load")}
@@ -126,8 +125,6 @@ export const SaveAsImage = () => {
       icon={ExportImageIcon}
       data-testid="image-export-button"
       onSelect={() => setAppState({ openDialog: { name: "imageExport" } })}
-      shortcut={getShortcutFromShortcutName("imageExport")}
-      aria-label={t("buttons.exportImage")}
     >
       {t("buttons.exportImage")}
     </DropdownMenuItem>
@@ -188,7 +185,6 @@ export const Help = () => {
       data-testid="help-menu-item"
       icon={HelpIcon}
       onSelect={() => actionManager.executeAction(actionShortcuts)}
-      shortcut="?"
       aria-label={t("helpDialog.title")}
     >
       {t("helpDialog.title")}
@@ -532,7 +528,6 @@ export const Preferences = ({
       <DropdownMenuSub.Content className="excalidraw-main-menu-preferences-submenu">
         {children || (
           <>
-            <PreferencesToggleToolLockItem />
             <PreferencesToggleSnapModeItem />
             <PreferencesToggleGridModeItem />
             <PreferencesToggleZenModeItem />

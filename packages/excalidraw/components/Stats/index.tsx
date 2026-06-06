@@ -192,77 +192,11 @@ export const StatsInner = memo(
             </div>
           </div>
 
-          <Collapsible
-            label={<h3>{t("stats.generalStats")}</h3>}
-            open={!!(appState.stats.panels & STATS_PANELS.generalStats)}
-            openTrigger={() =>
-              setAppState((state) => {
-                return {
-                  stats: {
-                    open: true,
-                    panels: state.stats.panels ^ STATS_PANELS.generalStats,
-                  },
-                };
-              })
-            }
-          >
-            <StatsRows>
-              <StatsRow heading>{t("stats.scene")}</StatsRow>
-              <StatsRow columns={2}>
-                <div>{t("stats.shapes")}</div>
-                <div>{elements.length}</div>
-              </StatsRow>
-              <StatsRow columns={2}>
-                <div>{t("stats.width")}</div>
-                <div>{sceneDimension.width}</div>
-              </StatsRow>
-              <StatsRow columns={2}>
-                <div>{t("stats.height")}</div>
-                <div>{sceneDimension.height}</div>
-              </StatsRow>
-              {gridModeEnabled && (
-                <>
-                  <StatsRow heading>Canvas</StatsRow>
-                  <StatsRow>
-                    <CanvasGrid
-                      property="gridStep"
-                      scene={scene}
-                      appState={appState}
-                      setAppState={setAppState}
-                    />
-                  </StatsRow>
-                </>
-              )}
-            </StatsRows>
-
-            {renderCustomStats?.(elements, appState)}
-          </Collapsible>
-
           {!_frameAndChildrenSelectedTogether && selectedElements.length > 0 && (
             <div
               id="elementStats"
-              style={{
-                marginTop: 12,
-              }}
             >
-              <Collapsible
-                label={<h3>{t("stats.elementProperties")}</h3>}
-                open={
-                  !!(appState.stats.panels & STATS_PANELS.elementProperties)
-                }
-                openTrigger={() =>
-                  setAppState((state) => {
-                    return {
-                      stats: {
-                        open: true,
-                        panels:
-                          state.stats.panels ^ STATS_PANELS.elementProperties,
-                      },
-                    };
-                  })
-                }
-              >
-                <StatsRows>
+              <StatsRows>
                   {singleElement && (
                     <>
                       {cropMode && (
@@ -423,7 +357,6 @@ export const StatsInner = memo(
                     </>
                   )}
                 </StatsRows>
-              </Collapsible>
             </div>
           )}
         </Island>
@@ -434,7 +367,6 @@ export const StatsInner = memo(
     return (
       prev.sceneNonce === next.sceneNonce &&
       prev.selectedElements === next.selectedElements &&
-      prev.appState.stats.panels === next.appState.stats.panels &&
       prev.gridModeEnabled === next.gridModeEnabled &&
       prev.appState.gridStep === next.appState.gridStep &&
       prev.appState.croppingElementId === next.appState.croppingElementId

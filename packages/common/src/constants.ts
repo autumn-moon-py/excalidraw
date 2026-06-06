@@ -319,12 +319,12 @@ export const URL_HASH_KEYS = {
 
 export const DEFAULT_UI_OPTIONS: AppProps["UIOptions"] = {
   canvasActions: {
-    changeViewBackgroundColor: true,
+    changeViewBackgroundColor: false,
     clearCanvas: true,
     export: { saveFileToDisk: true },
     loadScene: true,
     saveToActiveFile: true,
-    toggleTheme: null,
+    toggleTheme: false,
     saveAsImage: true,
   },
   tools: {

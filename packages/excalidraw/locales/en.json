@@ -192,7 +192,7 @@
     }
   },
   "search": {
-    "title": "Find on canvas",
+    "title": "Find",
     "noMatch": "No matches found...",
     "singleResult": "result",
     "multipleResults": "results",
@@ -203,8 +203,8 @@
   "buttons": {
     "clearReset": "Reset the canvas",
     "exportJSON": "Export to file",
-    "exportImage": "Export image...",
-    "export": "Save to...",
+    "exportImage": "Export image",
+    "export": "Save as",
     "copyToClipboard": "Copy to clipboard",
     "copyLink": "Copy link",
     "save": "Save to current file",
@@ -340,7 +340,7 @@
   },
   "hints": {
     "dismissSearch": "{{shortcut}} to dismiss search",
-    "canvasPanning": "To move canvas, hold {{shortcut_1}} or {{shortcut_2}} while dragging, or use the hand tool",
+    "canvasPanning": "To move canvas, {{shortcut}} and drag",
     "linearElement": "Click to start multiple points, drag for single line",
     "arrowTool": "Click to start multiple points, drag for single line. Press {{shortcut}} again to change arrow type.",
     "arrowBindModifiers": "Hold {{shortcut_1}} to disable binding, or {{shortcut_2}} to bind at a fixed point",
@@ -427,6 +427,7 @@
     "howto": "Follow our guides",
     "or": "or",
     "preventBinding": "Prevent arrow binding",
+    "rightClick": "Right-click",
     "tools": "Tools",
     "shortcuts": "Keyboard shortcuts",
     "textFinish": "Finish editing (text editor)",
@@ -515,7 +516,7 @@
     "scene": "Scene",
     "selected": "Selected",
     "storage": "Storage",
-    "fullTitle": "Canvas & Shape properties",
+    "fullTitle": "Shape properties",
     "title": "Properties",
     "generalStats": "General",
     "elementProperties": "Shape properties",
@@ -712,6 +713,7 @@
     "shift": "Shift",
     "spacebar": "Space",
     "delete": "Delete",
-    "mmb": "Scroll wheel"
+    "mmb": "Scroll wheel",
+    "rmb": "Right click"
   }
 }

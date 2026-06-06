@@ -505,7 +505,6 @@ describe("tool locking & selection", () => {
         value !== "selection" &&
         value !== "eraser" &&
         value !== "arrow" &&
-        value !== "hand" &&
         value !== "laser"
       ) {
         const element = UI.createElement(value);

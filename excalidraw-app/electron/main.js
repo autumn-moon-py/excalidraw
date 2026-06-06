@@ -1,15 +1,16 @@
-const { app, BrowserWindow } = require("electron");
 const path = require("path");
+
+const { app, BrowserWindow } = require("electron");
 
 const createWindow = () => {
   const win = new BrowserWindow({
     width: 1280,
     height: 800,
-    show: true,
+    show: false,
     webPreferences: {
       contextIsolation: true,
-      nodeIntegration: false
-    }
+      nodeIntegration: false,
+    },
   });
 
   const devServerUrl = process.env.ELECTRON_DEV_SERVER_URL;
@@ -19,6 +20,11 @@ const createWindow = () => {
     const indexPath = path.join(__dirname, "..", "build", "index.html");
     win.loadFile(indexPath);
   }
+
+  // Show window when ready to avoid white flash
+  win.once("ready-to-show", () => {
+    win.show();
+  });
 };
 
 app.whenReady().then(() => {

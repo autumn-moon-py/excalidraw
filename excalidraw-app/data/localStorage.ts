@@ -8,26 +8,23 @@ import type { AppState } from "@excalidraw/excalidraw/types";
 
 import { STORAGE_KEYS } from "../app_constants";
 
+const LOCAL_STORAGE_COLLAB = "excalidraw-collab";
+
 export const saveUsernameToLocalStorage = (username: string) => {
   try {
-    localStorage.setItem(
-      STORAGE_KEYS.LOCAL_STORAGE_COLLAB,
-      JSON.stringify({ username }),
-    );
+    localStorage.setItem(LOCAL_STORAGE_COLLAB, JSON.stringify({ username }));
   } catch (error: any) {
-    // Unable to access window.localStorage
     console.error(error);
   }
 };
 
 export const importUsernameFromLocalStorage = (): string | null => {
   try {
-    const data = localStorage.getItem(STORAGE_KEYS.LOCAL_STORAGE_COLLAB);
+    const data = localStorage.getItem(LOCAL_STORAGE_COLLAB);
     if (data) {
       return JSON.parse(data).username;
     }
   } catch (error: any) {
-    // Unable to access localStorage
     console.error(error);
   }
 
@@ -42,7 +39,6 @@ export const importFromLocalStorage = () => {
     savedElements = localStorage.getItem(STORAGE_KEYS.LOCAL_STORAGE_ELEMENTS);
     savedState = localStorage.getItem(STORAGE_KEYS.LOCAL_STORAGE_APP_STATE);
   } catch (error: any) {
-    // Unable to access localStorage
     console.error(error);
   }
 
@@ -52,7 +48,6 @@ export const importFromLocalStorage = () => {
       elements = JSON.parse(savedElements);
     } catch (error: any) {
       console.error(error);
-      // Do nothing because elements array is already empty
     }
   }
 
@@ -67,7 +62,6 @@ export const importFromLocalStorage = () => {
       };
     } catch (error: any) {
       console.error(error);
-      // Do nothing because appState is already null
     }
   }
   return { elements, appState };
@@ -87,12 +81,10 @@ export const getElementsStorageSize = () => {
 export const getTotalStorageSize = () => {
   try {
     const appState = localStorage.getItem(STORAGE_KEYS.LOCAL_STORAGE_APP_STATE);
-    const collab = localStorage.getItem(STORAGE_KEYS.LOCAL_STORAGE_COLLAB);
 
     const appStateSize = appState?.length || 0;
-    const collabSize = collab?.length || 0;
 
-    return appStateSize + collabSize + getElementsStorageSize();
+    return appStateSize + getElementsStorageSize();
   } catch (error: any) {
     console.error(error);
     return 0;

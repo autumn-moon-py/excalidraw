@@ -11,21 +11,13 @@ import {
   TextIcon,
   ImageIcon,
   EraserIcon,
+  frameToolIcon,
   laserPointerToolIcon,
-  handIcon,
 } from "./icons";
 
 import type { AppClassProperties } from "../types";
 
 export const SHAPES = [
-  {
-    icon: handIcon,
-    value: "hand",
-    key: KEYS.H,
-    numericKey: null,
-    fillable: false,
-    toolbar: true,
-  },
   {
     icon: SelectionIcon,
     value: "selection",
@@ -107,12 +99,20 @@ export const SHAPES = [
     toolbar: true,
   },
   {
+    icon: frameToolIcon,
+    value: "frame",
+    key: KEYS.F,
+    numericKey: null,
+    fillable: false,
+    toolbar: true,
+  },
+  {
     icon: laserPointerToolIcon,
     value: "laser",
     key: KEYS.K,
     numericKey: null,
     fillable: false,
-    toolbar: false,
+    toolbar: true,
   },
 ] as const;
 

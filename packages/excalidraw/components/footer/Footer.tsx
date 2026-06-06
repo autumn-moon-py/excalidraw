@@ -1,5 +1,7 @@
 import clsx from "clsx";
 
+import { isDarwin } from "@excalidraw/common";
+
 import { actionShortcuts } from "../../actions";
 import { useTunnels } from "../../context/tunnels";
 import { ExitZenModeButton, UndoRedoActions, ZoomActions } from "../Actions";
@@ -36,10 +38,12 @@ const Footer = ({
       >
         <Stack.Col gap={2}>
           <Section heading="canvasActions">
-            <ZoomActions
-              renderAction={actionManager.renderAction}
-              zoom={appState.zoom}
-            />
+            {!appState.viewModeEnabled && (
+              <ZoomActions
+                renderAction={actionManager.renderAction}
+                zoom={appState.zoom}
+              />
+            )}
 
             {!appState.viewModeEnabled && (
               <UndoRedoActions
@@ -61,9 +65,23 @@ const Footer = ({
       >
         <div style={{ position: "relative" }}>
           {renderWelcomeScreen && <WelcomeScreenHelpHintTunnel.Out />}
-          <HelpButton
-            onClick={() => actionManager.executeAction(actionShortcuts)}
-          />
+          {!appState.viewModeEnabled && (
+            <HelpButton
+              onClick={() => actionManager.executeAction(actionShortcuts)}
+            />
+          )}
+          {appState.viewModeEnabled && (
+            <div
+              style={{
+                color: "var(--color-text-secondary)",
+                fontSize: 12,
+                padding: 4,
+                userSelect: "none",
+              }}
+            >
+              Alt+R
+            </div>
+          )}
         </div>
       </div>
       <ExitZenModeButton

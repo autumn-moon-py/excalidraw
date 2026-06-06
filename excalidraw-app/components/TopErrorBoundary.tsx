@@ -1,11 +1,8 @@
-import Trans from "@excalidraw/excalidraw/components/Trans";
 import { t } from "@excalidraw/excalidraw/i18n";
-import * as Sentry from "@sentry/browser";
 import React from "react";
 
 interface TopErrorBoundaryState {
   hasError: boolean;
-  sentryEventId: string;
   localStorage: string;
 }
 
@@ -15,7 +12,6 @@ export class TopErrorBoundary extends React.Component<
 > {
   state: TopErrorBoundaryState = {
     hasError: false,
-    sentryEventId: "",
     localStorage: "",
   };
 
@@ -33,15 +29,10 @@ export class TopErrorBoundary extends React.Component<
       }
     }
 
-    Sentry.withScope((scope) => {
-      scope.setExtras(errorInfo);
-      const eventId = Sentry.captureException(error);
-
-      this.setState((state) => ({
-        hasError: true,
-        sentryEventId: eventId,
-        localStorage: JSON.stringify(_localStorage),
-      }));
+    console.error("Uncaught error:", error, errorInfo);
+    this.setState({
+      hasError: true,
+      localStorage: JSON.stringify(_localStorage),
     });
   }
 
@@ -52,56 +43,27 @@ export class TopErrorBoundary extends React.Component<
     }
   }
 
-  private async createGithubIssue() {
-    let body = "";
-    try {
-      const templateStrFn = (
-        await import(
-          /* webpackChunkName: "bug-issue-template" */ "../bug-issue-template"
-        )
-      ).default;
-      body = encodeURIComponent(templateStrFn(this.state.sentryEventId));
-    } catch (error: any) {
-      console.error(error);
-    }
-
-    window.open(
-      `https://github.com/excalidraw/excalidraw/issues/new?body=${body}`,
-      "_blank",
-      "noopener noreferrer",
-    );
-  }
-
   private errorSplash() {
     return (
       <div className="ErrorSplash excalidraw">
         <div className="ErrorSplash-messageContainer">
           <div className="ErrorSplash-paragraph bigger align-center">
-            <Trans
-              i18nKey="errorSplash.headingMain"
-              button={(el) => (
-                <button onClick={() => window.location.reload()}>{el}</button>
-              )}
-            />
+            Something went wrong.
+            <button onClick={() => window.location.reload()}>Reload</button>
           </div>
           <div className="ErrorSplash-paragraph align-center">
-            <Trans
-              i18nKey="errorSplash.clearCanvasMessage"
-              button={(el) => (
-                <button
-                  onClick={() => {
-                    try {
-                      localStorage.clear();
-                      window.location.reload();
-                    } catch (error: any) {
-                      console.error(error);
-                    }
-                  }}
-                >
-                  {el}
-                </button>
-              )}
-            />
+            <button
+              onClick={() => {
+                try {
+                  localStorage.clear();
+                  window.location.reload();
+                } catch (error: any) {
+                  console.error(error);
+                }
+              }}
+            >
+              {t("errorSplash.clearCanvasMessage")}
+            </button>
             <br />
             <div className="smaller">
               <span role="img" aria-label="warning">
@@ -115,17 +77,7 @@ export class TopErrorBoundary extends React.Component<
           </div>
           <div>
             <div className="ErrorSplash-paragraph">
-              {t("errorSplash.trackedToSentry", {
-                eventId: this.state.sentryEventId,
-              })}
-            </div>
-            <div className="ErrorSplash-paragraph">
-              <Trans
-                i18nKey="errorSplash.openIssueMessage"
-                button={(el) => (
-                  <button onClick={() => this.createGithubIssue()}>{el}</button>
-                )}
-              />
+              {t("errorSplash.sceneContent")}
             </div>
             <div className="ErrorSplash-paragraph">
               <div className="ErrorSplash-details">

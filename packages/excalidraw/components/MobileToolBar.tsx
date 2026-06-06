@@ -7,11 +7,8 @@ import { trackEvent } from "../analytics";
 
 import { t } from "../i18n";
 
-import { isHandToolActive } from "../appState";
-
 import { useTunnels } from "../context/tunnels";
 
-import { HandButton } from "./HandButton";
 import { ToolButton } from "./ToolButton";
 import DropdownMenu from "./dropdownMenu/DropdownMenu";
 import { ToolPopover } from "./ToolPopover";
@@ -83,13 +80,11 @@ const LINEAR_ELEMENT_TOOLS = [
 
 type MobileToolBarProps = {
   app: AppClassProperties;
-  onHandToolToggle: () => void;
   setAppState: React.Component<any, UIAppState>["setState"];
 };
 
 export const MobileToolBar = ({
   app,
-  onHandToolToggle,
   setAppState,
 }: MobileToolBarProps) => {
   const activeTool = app.state.activeTool;
@@ -199,14 +194,6 @@ export const MobileToolBar = ({
         }
       }}
     >
-      {/* Hand Tool */}
-      <HandButton
-        checked={isHandToolActive(app.state)}
-        onChange={onHandToolToggle}
-        title={t("toolBar.hand")}
-        isMobile
-      />
-
       {/* Selection Tool */}
       <ToolPopover
         app={app}

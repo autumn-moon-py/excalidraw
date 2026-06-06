@@ -177,8 +177,7 @@ const getHints = ({
 
     if (!selectedElements.length && !isMobile) {
       return t("hints.canvasPanning", {
-        shortcut_1: getTaggedShortcutKey(t("keys.mmb")),
-        shortcut_2: getTaggedShortcutKey("Space"),
+        shortcut: getTaggedShortcutKey(t("keys.rmb")),
       });
     }
 

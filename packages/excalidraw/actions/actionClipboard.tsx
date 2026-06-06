@@ -48,8 +48,9 @@ export const actionCopy = register<ClipboardEvent | null>({
       captureUpdate: CaptureUpdateAction.EVENTUALLY,
     };
   },
-  // don't supply a shortcut since we handle this conditionally via onCopy event
-  keyTest: undefined,
+  // keyTest is used to show the shortcut label in context menu;
+  // actual copy is handled via the browser onCopy event
+  keyTest: (event) => event[KEYS.CTRL_OR_CMD] && event.key === KEYS.C,
 });
 
 export const actionPaste = register({

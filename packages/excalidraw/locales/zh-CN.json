@@ -7,7 +7,7 @@
     "multiSelect": "添加元素到选区",
     "moveCanvas": "移动画布",
     "cut": "剪切",
-    "copy": "拷贝",
+    "copy": "复制",
     "copyAsPng": "复制为 PNG 到剪贴板",
     "copyAsSvg": "复制为 SVG 到剪贴板",
     "copyText": "复制文本到剪贴板",
@@ -190,7 +190,7 @@
     }
   },
   "search": {
-    "title": "在画布上查找",
+    "title": "查找",
     "noMatch": "无匹配项…",
     "singleResult": "结果",
     "multipleResults": "结果",
@@ -201,8 +201,8 @@
   "buttons": {
     "clearReset": "重置画布",
     "exportJSON": "导出为文件",
-    "exportImage": "导出图片...",
-    "export": "保存到...",
+    "exportImage": "导出图片",
+    "export": "另存为",
     "copyToClipboard": "复制到剪贴板",
     "copyLink": "复制链接",
     "save": "保存至当前文件",
@@ -338,7 +338,7 @@
   },
   "hints": {
     "dismissSearch": "按{{shortcut}}取消搜索",
-    "canvasPanning": "要移动画布，请按住{{shortcut_1}}或{{shortcut_2}}同时拖拽鼠标，或使用抓手工具。",
+    "canvasPanning": "要移动画布，{{shortcut}}并拖动",
     "linearElement": "点击创建多个点 拖动创建直线",
     "arrowTool": "点击创建多个点，拖动创建直线。按 {{shortcut}} 切换箭头类型。",
     "arrowBindModifiers": "",
@@ -425,6 +425,7 @@
     "howto": "帮助文档",
     "or": "或",
     "preventBinding": "禁用箭头吸附",
+    "rightClick": "右键",
     "tools": "工具",
     "shortcuts": "快捷键列表",
     "textFinish": "完成编辑 (文本编辑器)",
@@ -513,7 +514,7 @@
     "scene": "画布",
     "selected": "选中",
     "storage": "存储",
-    "fullTitle": "画布与形状属性",
+    "fullTitle": "形状属性",
     "title": "属性",
     "generalStats": "概况",
     "elementProperties": "形状属性",
@@ -710,6 +711,7 @@
     "shift": "Shift",
     "spacebar": "空格",
     "delete": "Delete",
-    "mmb": "鼠标滚轮"
+    "mmb": "鼠标滚轮",
+    "rmb": "右键"
   }
 }

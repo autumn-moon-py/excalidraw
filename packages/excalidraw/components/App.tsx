@@ -315,16 +315,14 @@ import {
   actionUnbindText,
   actionBindText,
   actionUngroup,
-  actionLink,
   actionToggleElementLock,
   actionToggleLinearEditor,
   actionToggleObjectsSnapMode,
   actionToggleCropEditor,
 } from "../actions";
 import { actionWrapTextInContainer } from "../actions/actionBoundText";
-import { actionToggleHandTool, zoomToFit } from "../actions/actionCanvas";
+import { zoomToFit } from "../actions/actionCanvas";
 import { actionPaste } from "../actions/actionClipboard";
-import { actionCopyElementLink } from "../actions/actionElementLink";
 import { actionUnlockAllElements } from "../actions/actionElementLock";
 import {
   actionRemoveAllElementsFromFrame,
@@ -342,7 +340,6 @@ import { AnimationFrameHandler } from "../animation-frame-handler";
 import {
   getDefaultAppState,
   isEraserActive,
-  isHandToolActive,
 } from "../appState";
 import {
   copyTextToSystemClipboard,
@@ -562,9 +559,13 @@ export const useExcalidrawActionManager = () =>
 let didTapTwice: boolean = false;
 let tappedTwiceTimer = 0;
 let firstTapPosition: { x: number; y: number } | null = null;
-let isHoldingSpace: boolean = false;
 let isPanning: boolean = false;
 let isDraggingScrollBar: boolean = false;
+/** tracks whether right-click drag has moved enough to be considered panning */
+let rightClickPanningStarted: boolean = false;
+let rightClickStartX: number = 0;
+let rightClickStartY: number = 0;
+const RIGHT_CLICK_PAN_THRESHOLD = 3;
 let currentScrollBars: ScrollBars = { horizontal: null, vertical: null };
 let touchTimeout = 0;
 let invalidateContextMenu = false;
@@ -1247,8 +1248,6 @@ class App extends React.Component<AppProps, AppState> {
       !this.lastPointerUpEvent ||
       // middle-click or something other than primary
       this.lastPointerDownEvent.button !== POINTER_BUTTON.MAIN ||
-      // panning
-      isHoldingSpace ||
       // wrong tool
       !oneOf(this.state.activeTool.type, ["laser", "selection", "lasso"])
     ) {
@@ -2058,10 +2057,9 @@ class App extends React.Component<AppProps, AppState> {
                           setAppState={this.setAppState}
                           actionManager={this.actionManager}
                           elements={this.scene.getNonDeletedElements()}
-                          onLockToggle={this.toggleLock}
-                          onPenModeToggle={this.togglePenMode}
-                          onHandToolToggle={this.onHandToolToggle}
-                          langCode={getLanguage().code}
+                           onLockToggle={this.toggleLock}
+                           onPenModeToggle={this.togglePenMode}
+                           langCode={getLanguage().code}
                           renderTopLeftUI={renderTopLeftUI}
                           renderTopRightUI={renderTopRightUI}
                           renderCustomStats={renderCustomStats}
@@ -2071,14 +2069,7 @@ class App extends React.Component<AppProps, AppState> {
                           }
                           UIOptions={this.props.UIOptions}
                           onExportImage={this.onExportImage}
-                          renderWelcomeScreen={
-                            !this.state.isLoading &&
-                            this.state.showWelcomeScreen &&
-                            this.state.activeTool.type ===
-                              this.state.preferredSelectionTool.type &&
-                            !this.state.zenModeEnabled &&
-                            !this.scene.getElementsIncludingDeleted().length
-                          }
+                          renderWelcomeScreen={false}
                           app={this}
                           isCollaborating={this.props.isCollaborating}
                           generateLinkForSelection={
@@ -2731,7 +2722,6 @@ class App extends React.Component<AppProps, AppState> {
   // Lifecycle
 
   private onBlur = withBatchedUpdates(() => {
-    isHoldingSpace = false;
     this.setState({ isBindingEnabled: true });
   });
 
@@ -4120,10 +4110,6 @@ class App extends React.Component<AppProps, AppState> {
     });
   };
 
-  onHandToolToggle = () => {
-    this.actionManager.executeAction(actionToggleHandTool);
-  };
-
   /**
    * Zooms on canvas viewport center
    */
@@ -4881,7 +4867,7 @@ class App extends React.Component<AppProps, AppState> {
       ) {
         const shape = findShapeByKey(event.key, this);
 
-        if (this.state.viewModeEnabled && !oneOf(shape, ["laser", "hand"])) {
+        if (this.state.viewModeEnabled && !oneOf(shape, ["laser"])) {
           return;
         }
 
@@ -5061,12 +5047,6 @@ class App extends React.Component<AppProps, AppState> {
         }
       }
 
-      if (event.key === KEYS.SPACE && gesture.pointers.size === 0) {
-        isHoldingSpace = true;
-        setCursor(this.interactiveCanvas, CURSOR_TYPE.GRAB);
-        event.preventDefault();
-      }
-
       if (
         (event.key === KEYS.G || event.key === KEYS.S) &&
         !event.altKey &&
@@ -5148,27 +5128,6 @@ class App extends React.Component<AppProps, AppState> {
   );
 
   private onKeyUp = withBatchedUpdates((event: KeyboardEvent) => {
-    if (event.key === KEYS.SPACE) {
-      if (
-        (this.state.viewModeEnabled &&
-          this.state.activeTool.type !== "laser") ||
-        this.state.openDialog?.name === "elementLinkSelector"
-      ) {
-        setCursor(this.interactiveCanvas, CURSOR_TYPE.GRAB);
-      } else if (isSelectionLikeTool(this.state.activeTool.type)) {
-        resetCursor(this.interactiveCanvas);
-      } else {
-        setCursorForShape(this.interactiveCanvas, this.state);
-        this.setState({
-          selectedElementIds: makeNextSelectedElementIds({}, this.state),
-          selectedGroupIds: {},
-          editingGroupId: null,
-          activeEmbeddable: null,
-        });
-      }
-      isHoldingSpace = false;
-    }
-
     if (event.key === KEYS.ALT) {
       maybeHandleArrowPointlikeDrag({ app: this, event });
     }
@@ -5352,14 +5311,10 @@ class App extends React.Component<AppProps, AppState> {
     }
 
     const nextActiveTool = updateActiveTool(this.state, tool);
-    if (nextActiveTool.type === "hand") {
-      setCursor(this.interactiveCanvas, CURSOR_TYPE.GRAB);
-    } else if (!isHoldingSpace) {
-      setCursorForShape(this.interactiveCanvas, {
-        ...this.state,
-        activeTool: nextActiveTool,
-      });
-    }
+    setCursorForShape(this.interactiveCanvas, {
+      ...this.state,
+      activeTool: nextActiveTool,
+    });
     if (isToolIcon(document.activeElement)) {
       this.focusContainer();
     }
@@ -6420,10 +6375,8 @@ class App extends React.Component<AppProps, AppState> {
     }
 
     if (
-      isHoldingSpace ||
       isPanning ||
-      isDraggingScrollBar ||
-      isHandToolActive(this.state)
+      isDraggingScrollBar
     ) {
       return;
     }
@@ -7663,15 +7616,73 @@ class App extends React.Component<AppProps, AppState> {
     if (
       !(
         gesture.pointers.size <= 1 &&
-        (event.button === POINTER_BUTTON.WHEEL ||
-          (event.button === POINTER_BUTTON.MAIN && isHoldingSpace) ||
-          isHandToolActive(this.state) ||
+        (event.button === POINTER_BUTTON.SECONDARY ||
           (this.state.viewModeEnabled &&
             this.state.activeTool.type !== "laser"))
       )
     ) {
       return false;
     }
+
+    // For right-click: don't immediately start panning.
+    // Track the start position and only enter panning mode once the
+    // pointer moves beyond a small threshold (drag). This allows
+    // right-click without drag to still show the context menu.
+    if (event.button === POINTER_BUTTON.SECONDARY) {
+      rightClickPanningStarted = false;
+      rightClickStartX = event.clientX;
+      rightClickStartY = event.clientY;
+      setCursor(this.interactiveCanvas, CURSOR_TYPE.GRAB);
+      this.focusContainer();
+
+      const onPointerMove = withBatchedUpdatesThrottled((e: PointerEvent) => {
+        const dx = Math.abs(e.clientX - rightClickStartX);
+        const dy = Math.abs(e.clientY - rightClickStartY);
+
+        if (!rightClickPanningStarted) {
+          if (dx < RIGHT_CLICK_PAN_THRESHOLD && dy < RIGHT_CLICK_PAN_THRESHOLD) {
+            return;
+          }
+          // threshold exceeded — start actual panning
+          rightClickPanningStarted = true;
+          isPanning = true;
+          setCursor(this.interactiveCanvas, CURSOR_TYPE.GRABBING);
+        }
+
+        const deltaX = rightClickStartX - e.clientX;
+        const deltaY = rightClickStartY - e.clientY;
+        rightClickStartX = e.clientX;
+        rightClickStartY = e.clientY;
+
+        this.translateCanvas({
+          scrollX: this.state.scrollX - deltaX / this.state.zoom.value,
+          scrollY: this.state.scrollY - deltaY / this.state.zoom.value,
+        });
+      });
+
+      const teardown = withBatchedUpdates(() => {
+        lastPointerUp = null;
+        if (rightClickPanningStarted) {
+          isPanning = false;
+        }
+        rightClickPanningStarted = false;
+        setCursorForShape(this.interactiveCanvas, this.state);
+        this.setState({ cursorButton: "up" });
+        this.savePointer(event.clientX, event.clientY, "up");
+        window.removeEventListener(EVENT.POINTER_MOVE, onPointerMove);
+        window.removeEventListener(EVENT.POINTER_UP, teardown);
+        window.removeEventListener(EVENT.BLUR, teardown);
+        onPointerMove.flush();
+      });
+
+      lastPointerUp = teardown;
+      window.addEventListener(EVENT.BLUR, teardown);
+      window.addEventListener(EVENT.POINTER_MOVE, onPointerMove, { passive: true });
+      window.addEventListener(EVENT.POINTER_UP, teardown);
+      return true;
+    }
+
+    // viewModeEnabled panning (non right-click)
     isPanning = true;
 
     // due to event.preventDefault below, container wouldn't get focus
@@ -7744,15 +7755,13 @@ class App extends React.Component<AppProps, AppState> {
       (lastPointerUp = () => {
         lastPointerUp = null;
         isPanning = false;
-        if (!isHoldingSpace) {
-          if (
-            this.state.viewModeEnabled &&
-            this.state.activeTool.type !== "laser"
-          ) {
-            setCursor(this.interactiveCanvas, CURSOR_TYPE.GRAB);
-          } else {
-            setCursorForShape(this.interactiveCanvas, this.state);
-          }
+        if (
+          this.state.viewModeEnabled &&
+          this.state.activeTool.type !== "laser"
+        ) {
+          setCursor(this.interactiveCanvas, CURSOR_TYPE.GRAB);
+        } else {
+          setCursorForShape(this.interactiveCanvas, this.state);
         }
         this.setState({
           cursorButton: "up",
@@ -11653,6 +11662,11 @@ class App extends React.Component<AppProps, AppState> {
   ) => {
     event.preventDefault();
 
+    // If right-click drag resulted in panning, don't show context menu
+    if (rightClickPanningStarted || isPanning) {
+      return;
+    }
+
     if (
       (("pointerType" in event.nativeEvent &&
         event.nativeEvent.pointerType === "touch") ||
@@ -12065,8 +12079,6 @@ class App extends React.Component<AppProps, AppState> {
   ): ContextMenuItems => {
     const options: ContextMenuItems = [];
 
-    options.push(actionCopyAsPng, actionCopyAsSvg);
-
     // canvas contextMenu
     // -------------------------------------------------------------------------
 
@@ -12084,10 +12096,6 @@ class App extends React.Component<AppProps, AppState> {
       return [
         actionPaste,
         CONTEXT_MENU_SEPARATOR,
-        actionCopyAsPng,
-        actionCopyAsSvg,
-        copyText,
-        CONTEXT_MENU_SEPARATOR,
         actionSelectAll,
         actionUnlockAllElements,
         CONTEXT_MENU_SEPARATOR,
@@ -12101,8 +12109,6 @@ class App extends React.Component<AppProps, AppState> {
 
     // element contextMenu
     // -------------------------------------------------------------------------
-
-    options.push(copyText);
 
     if (this.state.viewModeEnabled) {
       return [actionCopy, ...options];
@@ -12131,8 +12137,6 @@ class App extends React.Component<AppProps, AppState> {
       CONTEXT_MENU_SEPARATOR,
       actionToggleCropEditor,
       CONTEXT_MENU_SEPARATOR,
-      ...options,
-      CONTEXT_MENU_SEPARATOR,
       actionCopyStyles,
       actionPasteStyles,
       CONTEXT_MENU_SEPARATOR,
@@ -12142,8 +12146,6 @@ class App extends React.Component<AppProps, AppState> {
       actionBindText,
       actionWrapTextInContainer,
       actionUngroup,
-      CONTEXT_MENU_SEPARATOR,
-      actionAddToLibrary,
       ...zIndexActions,
       CONTEXT_MENU_SEPARATOR,
       actionFlipHorizontal,
@@ -12151,10 +12153,6 @@ class App extends React.Component<AppProps, AppState> {
       CONTEXT_MENU_SEPARATOR,
       actionToggleLinearEditor,
       CONTEXT_MENU_SEPARATOR,
-      actionLink,
-      actionCopyElementLink,
-      CONTEXT_MENU_SEPARATOR,
-      actionDuplicateSelection,
       actionToggleElementLock,
       CONTEXT_MENU_SEPARATOR,
       actionDeleteSelected,
@@ -12189,39 +12187,6 @@ class App extends React.Component<AppProps, AppState> {
       }
 
       const { deltaX, deltaY } = event;
-      // note that event.ctrlKey is necessary to handle pinch zooming
-      if (event.metaKey || event.ctrlKey) {
-        const sign = Math.sign(deltaY);
-        const MAX_STEP = ZOOM_STEP * 100;
-        const absDelta = Math.abs(deltaY);
-        let delta = deltaY;
-        if (absDelta > MAX_STEP) {
-          delta = MAX_STEP * sign;
-        }
-
-        let newZoom = this.state.zoom.value - delta / 100;
-        // increase zoom steps the more zoomed-in we are (applies to >100% only)
-        newZoom +=
-          Math.log10(Math.max(1, this.state.zoom.value)) *
-          -sign *
-          // reduced amplification for small deltas (small movements on a trackpad)
-          Math.min(1, absDelta / 20);
-
-        this.translateCanvas((state) => ({
-          ...getStateForZoom(
-            {
-              viewportX: this.lastViewportPosition.x,
-              viewportY: this.lastViewportPosition.y,
-              nextZoom: getNormalizedZoom(newZoom),
-            },
-            state,
-          ),
-          shouldCacheIgnoreZoom: true,
-        }));
-        this.resetShouldCacheIgnoreZoomDebounced();
-        return;
-      }
-
       // scroll horizontally when shift pressed
       if (event.shiftKey) {
         this.translateCanvas(({ zoom, scrollX }) => ({
@@ -12231,10 +12196,37 @@ class App extends React.Component<AppProps, AppState> {
         return;
       }
 
-      this.translateCanvas(({ zoom, scrollX, scrollY }) => ({
-        scrollX: scrollX - deltaX / zoom.value,
-        scrollY: scrollY - deltaY / zoom.value,
+      // default: wheel zooms canvas (10% step), Ctrl: fine zoom (1% step)
+      const sign = Math.sign(deltaY);
+      const isCtrl = event.metaKey || event.ctrlKey;
+      const step = isCtrl ? 0.01 : ZOOM_STEP;
+      const MAX_STEP = step * 100;
+      const absDelta = Math.abs(deltaY);
+      let delta = deltaY;
+      if (absDelta > MAX_STEP) {
+        delta = MAX_STEP * sign;
+      }
+
+      let newZoom = this.state.zoom.value - delta * step;
+      // increase zoom steps the more zoomed-in we are (applies to >100% only)
+      newZoom +=
+        Math.log10(Math.max(1, this.state.zoom.value)) *
+        -sign *
+        // reduced amplification for small deltas (small movements on a trackpad)
+        Math.min(1, absDelta / 20);
+
+      this.translateCanvas((state) => ({
+        ...getStateForZoom(
+          {
+            viewportX: this.lastViewportPosition.x,
+            viewportY: this.lastViewportPosition.y,
+            nextZoom: getNormalizedZoom(newZoom),
+          },
+          state,
+        ),
+        shouldCacheIgnoreZoom: true,
       }));
+      this.resetShouldCacheIgnoreZoomDebounced();
     },
   );
 

@@ -18,13 +18,8 @@ import type { MarkRequired } from "@excalidraw/common/utility-types";
 
 import {
   actionClearCanvas,
-  actionLink,
   actionToggleSearchMenu,
 } from "../../actions";
-import {
-  actionCopyElementLink,
-  actionLinkToElement,
-} from "../../actions/actionElementLink";
 import { getShortcutFromShortcutName } from "../../actions/shortcuts";
 import { trackEvent } from "../../analytics";
 import { useUIAppState } from "../../context/ui-appState";
@@ -335,9 +330,6 @@ function CommandPaletteInner({
         actionManager.actions.toggleLinearEditor,
         actionManager.actions.cropEditor,
         actionManager.actions.togglePolygon,
-        actionLink,
-        actionCopyElementLink,
-        actionLinkToElement,
       ].map((action: Action) =>
         actionToCommand(
           action,

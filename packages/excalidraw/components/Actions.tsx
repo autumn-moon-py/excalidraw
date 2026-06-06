@@ -4,7 +4,6 @@ import { Popover } from "radix-ui";
 
 import {
   CLASSES,
-  KEYS,
   capitalizeString,
   isTransparent,
 } from "@excalidraw/common";
@@ -29,7 +28,14 @@ import type {
   NonDeletedSceneElementsMap,
 } from "@excalidraw/element/types";
 
-import { actionToggleZenMode } from "../actions";
+import {
+  actionToggleZenMode,
+  actionToggleGridMode,
+  actionToggleObjectsSnapMode,
+  actionToggleStats,
+} from "../actions";
+import { actionToggleViewMode } from "../actions/actionToggleViewMode";
+import { getShortcutFromShortcutName } from "../actions/shortcuts";
 
 import { alignActionsPredicate } from "../actions/actionAlign";
 import { trackEvent } from "../analytics";
@@ -49,8 +55,6 @@ import { getFormValue } from "../actions/actionProperties";
 
 import { useTextEditorFocus } from "../hooks/useTextEditorFocus";
 
-import { actionToggleViewMode } from "../actions/actionToggleViewMode";
-
 import { getToolbarTools } from "./shapes";
 
 import "./Actions.scss";
@@ -59,6 +63,7 @@ import {
   useEditorInterface,
   useStylesPanelMode,
   useExcalidrawContainer,
+  useExcalidrawActionManager,
 } from "./App";
 import Stack from "./Stack";
 import { ToolButton } from "./ToolButton";
@@ -67,12 +72,6 @@ import { Tooltip } from "./Tooltip";
 import DropdownMenu from "./dropdownMenu/DropdownMenu";
 import { PropertiesPopover } from "./PropertiesPopover";
 import {
-  EmbedIcon,
-  extraToolsIcon,
-  frameToolIcon,
-  mermaidLogoIcon,
-  laserPointerToolIcon,
-  MagicIcon,
   LassoIcon,
   sharpArrowIcon,
   roundArrowIcon,
@@ -242,75 +241,6 @@ export const SelectedShapeActions = ({
       )}
 
       {renderAction("changeOpacity")}
-
-      <fieldset>
-        <legend>{t("labels.layers")}</legend>
-        <div className="buttonList">
-          {renderAction("sendToBack")}
-          {renderAction("sendBackward")}
-          {renderAction("bringForward")}
-          {renderAction("bringToFront")}
-        </div>
-      </fieldset>
-
-      {showAlignActions && !isSingleElementBoundContainer && (
-        <fieldset>
-          <legend>{t("labels.align")}</legend>
-          <div className="buttonList">
-            {
-              // swap this order for RTL so the button positions always match their action
-              // (i.e. the leftmost button aligns left)
-            }
-            {isRTL ? (
-              <>
-                {renderAction("alignRight")}
-                {renderAction("alignHorizontallyCentered")}
-                {renderAction("alignLeft")}
-              </>
-            ) : (
-              <>
-                {renderAction("alignLeft")}
-                {renderAction("alignHorizontallyCentered")}
-                {renderAction("alignRight")}
-              </>
-            )}
-            {targetElements.length > 2 &&
-              renderAction("distributeHorizontally")}
-            {/* breaks the row ˇˇ */}
-            <div style={{ flexBasis: "100%", height: 0 }} />
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: ".5rem",
-                marginTop: "-0.5rem",
-              }}
-            >
-              {renderAction("alignTop")}
-              {renderAction("alignVerticallyCentered")}
-              {renderAction("alignBottom")}
-              {targetElements.length > 2 &&
-                renderAction("distributeVertically")}
-            </div>
-          </div>
-        </fieldset>
-      )}
-      {!isEditingTextOrNewElement && targetElements.length > 0 && (
-        <fieldset>
-          <legend>{t("labels.actions")}</legend>
-          <div className="buttonList">
-            {editorInterface.formFactor !== "phone" &&
-              renderAction("duplicateSelection")}
-            {editorInterface.formFactor !== "phone" &&
-              renderAction("deleteSelectedElements")}
-            {renderAction("group")}
-            {renderAction("ungroup")}
-            {showLinkIcon && renderAction("hyperlink")}
-            {showCropEditorAction && renderAction("cropEditor")}
-            {showLineEditorAction && renderAction("toggleLinearEditor")}
-          </div>
-        </fieldset>
-      )}
     </div>
   );
 };
@@ -340,7 +270,6 @@ const CombinedShapeProperties = ({
     targetElements.length > 0 ||
     (appState.activeTool.type !== "selection" &&
       appState.activeTool.type !== "eraser" &&
-      appState.activeTool.type !== "hand" &&
       appState.activeTool.type !== "laser" &&
       appState.activeTool.type !== "lasso");
   const isOpen = appState.openPopup === "compactStrokeStyles";
@@ -1053,6 +982,7 @@ export const ShapesSwitcher = ({
   const stylesPanelMode = useStylesPanelMode();
   const isFullStylesPanel = stylesPanelMode === "full";
   const isCompactStylesPanel = stylesPanelMode === "compact";
+  const actionManager = useExcalidrawActionManager();
 
   const SELECTION_TOOLS = [
     {
@@ -1067,23 +997,21 @@ export const ShapesSwitcher = ({
     },
   ] as const;
 
-  const frameToolSelected = activeTool.type === "frame";
-  const laserToolSelected = activeTool.type === "laser";
-  const lassoToolSelected =
-    isFullStylesPanel &&
-    activeTool.type === "lasso" &&
-    app.state.preferredSelectionTool.type !== "lasso";
-
-  const embeddableToolSelected = activeTool.type === "embeddable";
-
-  const { TTDDialogTriggerTunnel } = useTunnels();
+  // Check if any preferences option is active
+  const preferencesActive =
+    app.state.activeTool.locked ||
+    app.state.objectsSnapModeEnabled ||
+    app.state.gridModeEnabled ||
+    app.state.zenModeEnabled ||
+    app.state.viewModeEnabled ||
+    app.state.stats.open;
 
   return (
     <>
       {getToolbarTools(app).map(
         ({ value, icon, key, numericKey, fillable, toolbar }) => {
           if (
-            toolbar === false ||
+            !toolbar ||
             UIOptions.tools?.[
               value as Extract<
                 typeof value,
@@ -1096,12 +1024,11 @@ export const ShapesSwitcher = ({
 
           const label = t(`toolBar.${value}`);
           const letter =
-            key && capitalizeString(typeof key === "string" ? key : key[0]);
+            key && capitalizeString(typeof key === "string" ? key : key[1]);
           const shortcut = letter
             ? `${letter} ${t("helpDialog.or")} ${numericKey}`
             : `${numericKey}`;
-          const keybindingLabel =
-            value === "hand" ? undefined : numericKey || letter;
+          const keybindingLabel = numericKey || letter;
 
           // when in compact styles panel mode (tablet)
           // use a ToolPopover for selection/lasso toggle as well
@@ -1155,14 +1082,6 @@ export const ShapesSwitcher = ({
                 if (!app.state.penDetected && pointerType === "pen") {
                   app.togglePenMode(true);
                 }
-
-                if (value === "selection") {
-                  if (app.state.activeTool.type === "selection") {
-                    app.setActiveTool({ type: "lasso" });
-                  } else {
-                    app.setActiveTool({ type: "selection" });
-                  }
-                }
               }}
               onChange={({ pointerType }) => {
                 if (app.state.activeTool.type !== value) {
@@ -1185,93 +1104,67 @@ export const ShapesSwitcher = ({
       <DropdownMenu open={isExtraToolsMenuOpen}>
         <DropdownMenu.Trigger
           className={clsx("App-toolbar__extra-tools-trigger", {
-            "App-toolbar__extra-tools-trigger--selected":
-              frameToolSelected ||
-              embeddableToolSelected ||
-              lassoToolSelected ||
-              // in collab we're already highlighting the laser button
-              // outside toolbar, so let's not highlight extra-tools button
-              // on top of it
-              (laserToolSelected && !app.props.isCollaborating),
+            "App-toolbar__extra-tools-trigger--selected": preferencesActive,
           })}
           onToggle={() => {
             setIsExtraToolsMenuOpen(!isExtraToolsMenuOpen);
             setAppState({ openMenu: null, openPopup: null });
           }}
-          title={t("toolBar.extraTools")}
+          title={t("labels.preferences")}
         >
-          {frameToolSelected
-            ? frameToolIcon
-            : embeddableToolSelected
-            ? EmbedIcon
-            : laserToolSelected && !app.props.isCollaborating
-            ? laserPointerToolIcon
-            : lassoToolSelected
-            ? LassoIcon
-            : extraToolsIcon}
+          {adjustmentsIcon}
         </DropdownMenu.Trigger>
         <DropdownMenu.Content
           onClickOutside={() => setIsExtraToolsMenuOpen(false)}
           onSelect={() => setIsExtraToolsMenuOpen(false)}
           className="App-toolbar__extra-tools-dropdown"
         >
-          <DropdownMenu.Item
-            onSelect={() => app.setActiveTool({ type: "frame" })}
-            icon={frameToolIcon}
-            shortcut={KEYS.F.toLocaleUpperCase()}
-            data-testid="toolbar-frame"
-            selected={frameToolSelected}
+          <DropdownMenu.ItemCheckbox
+            checked={app.state.objectsSnapModeEnabled}
+            onSelect={(event) => {
+              actionManager.executeAction(actionToggleObjectsSnapMode, "ui");
+              event.preventDefault();
+            }}
           >
-            {t("toolBar.frame")}
-          </DropdownMenu.Item>
-          <DropdownMenu.Item
-            onSelect={() => app.setActiveTool({ type: "embeddable" })}
-            icon={EmbedIcon}
-            data-testid="toolbar-embeddable"
-            selected={embeddableToolSelected}
+            {t("buttons.objectsSnapMode")}
+          </DropdownMenu.ItemCheckbox>
+          <DropdownMenu.ItemCheckbox
+            checked={app.state.gridModeEnabled}
+            onSelect={(event) => {
+              actionManager.executeAction(actionToggleGridMode, "ui");
+              event.preventDefault();
+            }}
           >
-            {t("toolBar.embeddable")}
-          </DropdownMenu.Item>
-          <DropdownMenu.Item
-            onSelect={() => app.setActiveTool({ type: "laser" })}
-            icon={laserPointerToolIcon}
-            data-testid="toolbar-laser"
-            selected={laserToolSelected}
-            shortcut={KEYS.K.toLocaleUpperCase()}
+            {t("labels.toggleGrid")}
+          </DropdownMenu.ItemCheckbox>
+          <DropdownMenu.ItemCheckbox
+            checked={app.state.zenModeEnabled}
+            onSelect={(event) => {
+              actionManager.executeAction(actionToggleZenMode, "ui");
+              event.preventDefault();
+            }}
           >
-            {t("toolBar.laser")}
-          </DropdownMenu.Item>
-          {isFullStylesPanel && (
-            <DropdownMenu.Item
-              onSelect={() => app.setActiveTool({ type: "lasso" })}
-              icon={LassoIcon}
-              data-testid="toolbar-lasso"
-              selected={lassoToolSelected}
-            >
-              {t("toolBar.lasso")}
-            </DropdownMenu.Item>
-          )}
-          <div style={{ margin: "6px 0", fontSize: 14, fontWeight: 600 }}>
-            Generate
-          </div>
-          {app.props.aiEnabled !== false && <TTDDialogTriggerTunnel.Out />}
-          <DropdownMenu.Item
-            onSelect={() => app.setOpenDialog({ name: "ttd", tab: "mermaid" })}
-            icon={mermaidLogoIcon}
-            data-testid="toolbar-embeddable"
+            {t("buttons.zenMode")}
+          </DropdownMenu.ItemCheckbox>
+          <DropdownMenu.ItemCheckbox
+            checked={app.state.viewModeEnabled}
+            shortcut={getShortcutFromShortcutName("viewMode")}
+            onSelect={(event) => {
+              actionManager.executeAction(actionToggleViewMode, "ui");
+              event.preventDefault();
+            }}
           >
-            {t("toolBar.mermaidToExcalidraw")}
-          </DropdownMenu.Item>
-          {app.props.aiEnabled !== false && app.plugins.diagramToCode && (
-            <DropdownMenu.Item
-              onSelect={() => app.onMagicframeToolSelect()}
-              icon={MagicIcon}
-              data-testid="toolbar-magicframe"
-              badge={<DropdownMenu.Item.Badge>AI</DropdownMenu.Item.Badge>}
-            >
-              {t("toolBar.magicframe")}
-            </DropdownMenu.Item>
-          )}
+            {t("labels.viewMode")}
+          </DropdownMenu.ItemCheckbox>
+          <DropdownMenu.ItemCheckbox
+            checked={app.state.stats.open}
+            onSelect={(event) => {
+              actionManager.executeAction(actionToggleStats, "ui");
+              event.preventDefault();
+            }}
+          >
+            {t("stats.fullTitle")}
+          </DropdownMenu.ItemCheckbox>
         </DropdownMenu.Content>
       </DropdownMenu>
     </>
