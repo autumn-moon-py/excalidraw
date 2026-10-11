@@ -114,6 +114,9 @@ const isQuotaExceededError = (error: any) => {
 type SavingLockTypes = "collaboration";
 
 export class LocalData {
+  /** 桌面端纯文件模式：只缓存图片二进制，不把画布状态写入 localStorage */
+  static persistAppStateLocally = true;
+
   private static _save = debounce(
     async (
       elements: readonly ExcalidrawElement[],
@@ -121,7 +124,9 @@ export class LocalData {
       files: BinaryFiles,
       onFilesSaved: () => void,
     ) => {
-      saveDataStateToLocalStorage(elements, appState);
+      if (LocalData.persistAppStateLocally) {
+        saveDataStateToLocalStorage(elements, appState);
+      }
 
       await this.fileStorage.saveFiles({
         elements,

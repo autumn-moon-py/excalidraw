@@ -122,7 +122,8 @@ export class Renderer {
         newElementId: ExcalidrawElement["id"] | undefined;
         sceneNonce: ReturnType<InstanceType<typeof Scene>["getSceneNonce"]>;
       }) => {
-        const elements = this.scene.getNonDeletedElements();
+        // 渲染只取可见元素（排除图层面板中隐藏的元素）
+        const elements = this.scene.getVisibleElements();
 
         const elementsMap = getRenderableElements({
           elements,

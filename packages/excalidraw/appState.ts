@@ -92,6 +92,7 @@ export const getDefaultAppState = (): Omit<
     selectedElementIds: {},
     hoveredElementIds: {},
     selectedGroupIds: {},
+    groupNames: {},
     selectedElementsAreBeingDragged: false,
     selectionElement: null,
     shouldCacheIgnoreZoom: false,
@@ -115,6 +116,7 @@ export const getDefaultAppState = (): Omit<
     showHyperlinkPopup: false,
     selectedLinearElement: null,
     snapLines: [],
+    rulerMeasurement: null,
     originSnapOffset: {
       x: 0,
       y: 0,
@@ -221,6 +223,8 @@ const APP_STATE_STORAGE_CONF = (<
   selectedElementIds: { browser: true, export: false, server: false },
   hoveredElementIds: { browser: false, export: false, server: false },
   selectedGroupIds: { browser: true, export: false, server: false },
+  // 分组名称属于场景数据，需随文件导出
+  groupNames: { browser: true, export: true, server: false },
   selectedElementsAreBeingDragged: {
     browser: false,
     export: false,
@@ -244,6 +248,7 @@ const APP_STATE_STORAGE_CONF = (<
   showHyperlinkPopup: { browser: false, export: false, server: false },
   selectedLinearElement: { browser: true, export: false, server: false },
   snapLines: { browser: false, export: false, server: false },
+  rulerMeasurement: { browser: false, export: false, server: false },
   originSnapOffset: { browser: false, export: false, server: false },
   objectsSnapModeEnabled: { browser: true, export: false, server: false },
   userToFollow: { browser: false, export: false, server: false },

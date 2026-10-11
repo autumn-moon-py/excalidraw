@@ -157,9 +157,18 @@ export type ToolType =
   | "frame"
   | "magicframe"
   | "embeddable"
-  | "laser";
+  | "laser"
+  | "ruler";
 
 export type ElementOrToolType = ExcalidrawElementType | ToolType | "custom";
+
+// 量尺工具的临时测量数据（场景坐标），仅用于交互渲染，不产生元素
+export type RulerMeasurement = {
+  start: [number, number];
+  end: [number, number];
+  // 显示长度：格子模式下单位为网格1格，否则为场景像素，始终取整
+  length: number;
+};
 
 export type ActiveTool =
   | {
@@ -231,6 +240,8 @@ export type InteractiveCanvasAppState = Readonly<
     collaborators: AppState["collaborators"];
     // SnapLines
     snapLines: AppState["snapLines"];
+    // Ruler
+    rulerMeasurement: AppState["rulerMeasurement"];
     zenModeEnabled: AppState["zenModeEnabled"];
     editingTextElement: AppState["editingTextElement"];
     // Cropping
@@ -409,6 +420,8 @@ export interface AppState {
 
   /** top-most selected groups (i.e. does not include nested groups) */
   selectedGroupIds: { [groupId: string]: boolean };
+  /** 图层面板：分组的自定义名称，key 为 groupId */
+  groupNames: Record<string, string>;
   /** group being edited when you drill down to its constituent element
     (e.g. when you double-click on a group's element) */
   editingGroupId: GroupId | null;
@@ -437,6 +450,7 @@ export interface AppState {
   showHyperlinkPopup: false | "info" | "editor";
   selectedLinearElement: LinearElementEditor | null;
   snapLines: readonly SnapLine[];
+  rulerMeasurement: RulerMeasurement | null;
   originSnapOffset: {
     x: number;
     y: number;

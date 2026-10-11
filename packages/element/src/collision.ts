@@ -71,11 +71,18 @@ import type {
   ExcalidrawFreeDrawElement,
   ExcalidrawLinearElement,
   ExcalidrawRectanguloidElement,
+  ExcalidrawTextElement,
   NonDeleted,
   NonDeletedExcalidrawElement,
   NonDeletedSceneElementsMap,
   Ordered,
 } from "./types";
+
+/**
+ * 独立文本元素（无容器）四周的额外点击留白（场景像素）。
+ * 文本热区使用以四角界定的规整矩形，而非紧贴文字的边缘区域。
+ */
+const TEXT_HIT_TEST_PADDING = 8;
 
 export const shouldTestInside = (element: ExcalidrawElement) => {
   if (element.type === "arrow") {
@@ -113,6 +120,31 @@ let cachedElement: WeakRef<ExcalidrawElement> | null = null;
 let cachedThreshold: number = Infinity;
 let cachedHit: boolean = false;
 let cachedOverrideShouldTestInside = false;
+
+/**
+ * 独立文本元素的命中判定：以元素四角为基准向外扩展 padding，
+ * 得到一个随元素旋转的规整矩形，矩形内部均视为命中。
+ */
+const isPointInTextElement = (
+  point: GlobalPoint,
+  element: ExcalidrawTextElement,
+  padding: number,
+) => {
+  const center = pointFrom<GlobalPoint>(
+    element.x + element.width / 2,
+    element.y + element.height / 2,
+  );
+  const rotatedPoint = pointRotateRads(point, center, -element.angle as Radians);
+
+  return isPointWithinBounds(
+    pointFrom(element.x - padding, element.y - padding),
+    rotatedPoint,
+    pointFrom(
+      element.x + element.width + padding,
+      element.y + element.height + padding,
+    ),
+  );
+};
 
 export const hitElementItself = ({
   point,
@@ -152,16 +184,30 @@ export const hitElementItself = ({
       )
     : false;
 
+  // 独立文本使用四周留白的规整矩形作为热区
+  const isStandaloneTextElement =
+    isTextElement(element) && !element.containerId;
+  // 缩小视图时 threshold 会变大，这里取两者较大值以保证热区不劣化
+  const textHitPadding = isStandaloneTextElement
+    ? Math.max(TEXT_HIT_TEST_PADDING, threshold)
+    : 0;
+
   // Hit test against the extended, rotated bounding box of the element first
   const bounds = getElementBounds(element, elementsMap, true);
   const hitBounds = isPointWithinBounds(
-    pointFrom(bounds[0] - threshold, bounds[1] - threshold),
+    pointFrom(
+      bounds[0] - threshold - textHitPadding,
+      bounds[1] - threshold - textHitPadding,
+    ),
     pointRotateRads(
       point,
       getCenterForBounds(bounds),
       -element.angle as Radians,
     ),
-    pointFrom(bounds[2] + threshold, bounds[3] + threshold),
+    pointFrom(
+      bounds[2] + threshold + textHitPadding,
+      bounds[3] + threshold + textHitPadding,
+    ),
   );
 
   // PERF: Bail out early if the point is not even in the
@@ -171,14 +217,16 @@ export const hitElementItself = ({
   }
 
   // Do the precise (and relatively costly) hit test
-  const hitElement = (
-    overrideShouldTestInside ? true : shouldTestInside(element)
-  )
-    ? // Since `inShape` tests STRICTLY againt the insides of a shape
-      // we would need `onShape` as well to include the "borders"
-      isPointInElement(point, element, elementsMap) ||
-      isPointOnElementOutline(point, element, elementsMap, threshold)
-    : isPointOnElementOutline(point, element, elementsMap, threshold);
+  const hitElement = isStandaloneTextElement
+    ? isPointInTextElement(point, element as ExcalidrawTextElement, textHitPadding)
+    : (
+        overrideShouldTestInside ? true : shouldTestInside(element)
+      )
+      ? // Since `inShape` tests STRICTLY againt the insides of a shape
+        // we would need `onShape` as well to include the "borders"
+        isPointInElement(point, element, elementsMap) ||
+          isPointOnElementOutline(point, element, elementsMap, threshold)
+      : isPointOnElementOutline(point, element, elementsMap, threshold);
 
   const result = hitElement || hitFrameName;
 

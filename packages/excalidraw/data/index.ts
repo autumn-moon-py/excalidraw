@@ -50,7 +50,10 @@ export const prepareElementsForExport = (
   { selectedElementIds }: Pick<AppState, "selectedElementIds">,
   exportSelectionOnly: boolean,
 ) => {
-  elements = getNonDeletedElements(elements);
+  // 导出/复制不包含被图层面板隐藏的元素
+  elements = getNonDeletedElements(elements).filter(
+    (element) => !element.hidden,
+  );
 
   const isExportingSelection =
     exportSelectionOnly &&

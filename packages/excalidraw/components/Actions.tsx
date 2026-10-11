@@ -2,11 +2,7 @@ import clsx from "clsx";
 import { useRef, useState } from "react";
 import { Popover } from "radix-ui";
 
-import {
-  CLASSES,
-  capitalizeString,
-  isTransparent,
-} from "@excalidraw/common";
+import { CLASSES, capitalizeString, isTransparent } from "@excalidraw/common";
 
 import {
   shouldAllowVerticalAlign,
@@ -39,7 +35,6 @@ import { getShortcutFromShortcutName } from "../actions/shortcuts";
 
 import { alignActionsPredicate } from "../actions/actionAlign";
 import { trackEvent } from "../analytics";
-import { useTunnels } from "../context/tunnels";
 
 import { t } from "../i18n";
 import {
@@ -980,7 +975,6 @@ export const ShapesSwitcher = ({
 }) => {
   const [isExtraToolsMenuOpen, setIsExtraToolsMenuOpen] = useState(false);
   const stylesPanelMode = useStylesPanelMode();
-  const isFullStylesPanel = stylesPanelMode === "full";
   const isCompactStylesPanel = stylesPanelMode === "compact";
   const actionManager = useExcalidrawActionManager();
 

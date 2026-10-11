@@ -82,6 +82,7 @@ import type {
 } from "@excalidraw/element/types";
 
 import { renderSnaps } from "../renderer/renderSnaps";
+import { renderRuler } from "../renderer/renderRuler";
 import { roundRect } from "../renderer/roundRect";
 import {
   getScrollBars,
@@ -1962,6 +1963,8 @@ const _renderInteractiveScene = ({
   });
 
   renderSnaps(context, appState);
+
+  renderRuler(context, appState);
 
   context.restore();
 

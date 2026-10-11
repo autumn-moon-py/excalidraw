@@ -115,6 +115,7 @@ export const AllowedExcalidrawActiveTools: Record<
   embeddable: true,
   hand: true,
   laser: false,
+  ruler: false,
   magicframe: false,
 };
 
@@ -259,8 +260,13 @@ const repairBinding = <T extends ExcalidrawArrowElement>(
 };
 
 const restoreElementWithProperties = <
-  T extends Required<Omit<ExcalidrawElement, "customData">> & {
+  T extends Required<
+    Omit<ExcalidrawElement, "customData" | "hidden" | "layerName">
+  > & {
     customData?: ExcalidrawElement["customData"];
+    // 图层面板字段：可选，缺省即"可见 / 无自定义名"
+    hidden?: boolean;
+    layerName?: string;
     /** @deprecated */
     boundElementIds?: readonly ExcalidrawElement["id"][];
     /** @deprecated */

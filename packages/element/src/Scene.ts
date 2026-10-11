@@ -64,6 +64,24 @@ const getNonDeletedElements = <T extends ExcalidrawElement>(
   return { elementsMap, elements };
 };
 
+/** 视图层可见元素：非删除，且未在图层面板中被隐藏 */
+const getVisibleElements = <T extends ExcalidrawElement>(
+  allElements: readonly T[],
+) => {
+  const elementsMap = new Map() as NonDeletedSceneElementsMap;
+  const elements: T[] = [];
+  for (const element of allElements) {
+    if (!element.isDeleted && !element.hidden) {
+      elements.push(element as NonDeleted<T>);
+      elementsMap.set(
+        element.id,
+        element as Ordered<NonDeletedExcalidrawElement>,
+      );
+    }
+  }
+  return { elementsMap, elements };
+};
+
 const validateIndicesThrottled = throttle(
   (elements: readonly ExcalidrawElement[]) => {
     if (isDevEnv() || isTestEnv() || window?.DEBUG_FRACTIONAL_INDICES) {
@@ -117,6 +135,11 @@ export class Scene {
   private nonDeletedElementsMap = toBrandedType<NonDeletedSceneElementsMap>(
     new Map(),
   );
+  /** 非删除且未被隐藏的元素（渲染/命中/导出用） */
+  private visibleElements: readonly Ordered<NonDeletedExcalidrawElement>[] = [];
+  private visibleElementsMap = toBrandedType<NonDeletedSceneElementsMap>(
+    new Map(),
+  );
   // ideally all elements within the scene should be wrapped around with `Ordered` type, but right now there is no real benefit doing so
   private elements: readonly OrderedExcalidrawElement[] = [];
   private nonDeletedFramesLikes: readonly NonDeleted<ExcalidrawFrameLikeElement>[] =
@@ -158,6 +181,15 @@ export class Scene {
 
   getNonDeletedElements() {
     return this.nonDeletedElements;
+  }
+
+  /** 渲染/命中/框选/导出可见的集合（排除被隐藏的元素） */
+  getVisibleElements() {
+    return this.visibleElements;
+  }
+
+  getVisibleElementsMap() {
+    return this.visibleElementsMap;
   }
 
   getFramesIncludingDeleted() {
@@ -294,6 +326,10 @@ export class Scene {
     this.nonDeletedElements = nonDeletedElements.elements;
     this.nonDeletedElementsMap = nonDeletedElements.elementsMap;
 
+    const visibleElements = getVisibleElements(this.elements);
+    this.visibleElements = visibleElements.elements;
+    this.visibleElementsMap = visibleElements.elementsMap;
+
     this.frames = nextFrameLikes;
     this.nonDeletedFramesLikes = getNonDeletedElements(this.frames).elements;
 
@@ -326,9 +362,11 @@ export class Scene {
   destroy() {
     this.elements = [];
     this.nonDeletedElements = [];
+    this.visibleElements = [];
     this.nonDeletedFramesLikes = [];
     this.frames = [];
     this.elementsMap.clear();
+    this.visibleElementsMap.clear();
     this.selectedElementsCache.selectedElementIds = null;
     this.selectedElementsCache.elements = null;
     this.selectedElementsCache.cache.clear();

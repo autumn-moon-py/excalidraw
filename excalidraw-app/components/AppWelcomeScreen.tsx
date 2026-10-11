@@ -1,6 +1,9 @@
+import { LoadIcon } from "@excalidraw/excalidraw/components/icons";
 import { useI18n } from "@excalidraw/excalidraw/i18n";
 import { WelcomeScreen } from "@excalidraw/excalidraw/index";
 import React from "react";
+
+import { isDesktopApp, openFileFromDisk } from "../native-file";
 
 export const AppWelcomeScreen: React.FC = React.memo(() => {
   const { t } = useI18n();
@@ -22,7 +25,17 @@ export const AppWelcomeScreen: React.FC = React.memo(() => {
           {t("welcomeScreen.app.center_heading_line3")}
         </WelcomeScreen.Center.Heading>
         <WelcomeScreen.Center.Menu>
-          <WelcomeScreen.Center.MenuItemLoadScene />
+          {isDesktopApp() ? (
+            <WelcomeScreen.Center.MenuItem
+              onSelect={() => openFileFromDisk()}
+              shortcut="Ctrl+O"
+              icon={LoadIcon}
+            >
+              {t("buttons.load")}
+            </WelcomeScreen.Center.MenuItem>
+          ) : (
+            <WelcomeScreen.Center.MenuItemLoadScene />
+          )}
           <WelcomeScreen.Center.MenuItemHelp />
         </WelcomeScreen.Center.Menu>
       </WelcomeScreen.Center>

@@ -1,6 +1,6 @@
 {
   "name": "excalidraw-app",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "private": true,
   "homepage": ".",
   "main": "electron/main.js",
@@ -62,6 +62,14 @@
       "package.json"
     ],
     "asar": true,
+    "fileAssociations": [
+      {
+        "ext": "excalidraw",
+        "name": "Excalidraw.Document",
+        "description": "Excalidraw 画布文件",
+        "role": "Editor"
+      }
+    ],
     "win": {
       "target": [
         "nsis",

@@ -255,6 +255,7 @@ const getRelevantAppStateProps = (
   collaborators: appState.collaborators, // Necessary for collab. sessions
   activeEmbeddable: appState.activeEmbeddable,
   snapLines: appState.snapLines,
+  rulerMeasurement: appState.rulerMeasurement,
   zenModeEnabled: appState.zenModeEnabled,
   editingTextElement: appState.editingTextElement,
   isCropping: appState.isCropping,

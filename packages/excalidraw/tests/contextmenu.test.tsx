@@ -81,31 +81,15 @@ describe("contextMenu element", () => {
   });
 
   it("shows context menu for canvas", () => {
+    // Right-click context menu now requires selected elements
+    // Without selection, context menu should not appear
     fireEvent.contextMenu(GlobalTestState.interactiveCanvas, {
       button: 2,
       clientX: 1,
       clientY: 1,
     });
     const contextMenu = UI.queryContextMenu();
-    const contextMenuOptions =
-      contextMenu?.querySelectorAll(".context-menu li");
-    const expectedShortcutNames: ShortcutName[] = [
-      "paste",
-      "selectAll",
-      "gridMode",
-      "zenMode",
-      "viewMode",
-      "objectsSnapMode",
-      "stats",
-    ];
-
-    expect(contextMenu).not.toBeNull();
-    expect(contextMenuOptions?.length).toBe(expectedShortcutNames.length);
-    expectedShortcutNames.forEach((shortcutName) => {
-      expect(
-        contextMenu?.querySelector(`li[data-testid="${shortcutName}"]`),
-      ).not.toBeNull();
-    });
+    expect(contextMenu).toBeNull();
   });
 
   it("shows context menu for element", () => {

@@ -1,8 +1,4 @@
-import {
-  Excalidraw,
-  TTDDialogTrigger,
-  CaptureUpdateAction,
-} from "@excalidraw/excalidraw";
+import { Excalidraw, CaptureUpdateAction } from "@excalidraw/excalidraw";
 import { ErrorDialog } from "@excalidraw/excalidraw/components/ErrorDialog";
 import { OverwriteConfirmDialog } from "@excalidraw/excalidraw/components/OverwriteConfirm/OverwriteConfirm";
 import {
@@ -70,6 +66,20 @@ import DebugCanvas, {
   isVisualDebuggerEnabled,
   loadSavedDebugState,
 } from "./components/DebugCanvas";
+import {
+  getSceneFromLaunchFile,
+  isDesktopApp,
+  openFileByPath,
+  openFileFromDisk,
+  saveToCurrentFile,
+  setExcalidrawAPI,
+} from "./native-file";
+import {
+  LayerSidebar,
+  LayerSidebarTrigger,
+  LAYERS_SIDEBAR_NAME,
+  LAYERS_TAB,
+} from "./components/LayerPanel/LayerSidebar";
 
 import "./index.scss";
 
@@ -77,9 +87,37 @@ polyfill();
 
 window.EXCALIDRAW_THROTTLE_RENDER = true;
 
+// 桌面端为纯文件模式：画布状态只来自磁盘文件，不写入浏览器本地缓存
+const IS_DESKTOP = isDesktopApp();
+if (IS_DESKTOP) {
+  LocalData.persistAppStateLocally = false;
+}
+
+// 桌面端由应用自己接管打开/保存，禁用 Excalidraw 内置的对应动作与快捷键
+const APP_UI_OPTIONS = {
+  canvasActions: {
+    loadScene: !IS_DESKTOP,
+    saveToActiveFile: !IS_DESKTOP,
+  },
+};
+
+// 右上角的图层面板入口按钮（保持引用稳定，避免 Excalidraw 反复重渲染）
+const renderLayerTrigger = () => <LayerSidebarTrigger />;
+
 const initializeScene = async (): Promise<{
   scene: ExcalidrawInitialDataState | null;
 }> => {
+  if (IS_DESKTOP) {
+    // 启动内容仅来自双击/参数传入的文件，否则空白画布
+    try {
+      const launchScene = await getSceneFromLaunchFile();
+      return { scene: launchScene ?? { elements: [], appState: {} } };
+    } catch (error) {
+      console.error(error);
+      return { scene: { elements: [], appState: {} } };
+    }
+  }
+
   const localDataState = importFromLocalStorage();
 
   const scene: Omit<RestoredDataState, "files"> & {
@@ -142,11 +180,14 @@ const ExcalidrawWrapper = () => {
       return;
     }
 
+    setExcalidrawAPI(excalidrawAPI);
+
     const loadImages = (
       data: { scene: ExcalidrawInitialDataState | null },
       isInitialLoad = false,
     ) => {
-      if (!data.scene) {
+      // 纯文件模式：图片随文件内嵌数据加载，无需从本地缓存取
+      if (IS_DESKTOP || !data.scene) {
         return;
       }
 
@@ -275,7 +316,63 @@ const ExcalidrawWrapper = () => {
         visibilityChange,
         false,
       );
+      setExcalidrawAPI(null);
     };
+  }, [excalidrawAPI]);
+
+  // 桌面端：Ctrl+S 保存回原文件，Ctrl+O 原生打开，并响应再次双击文件
+  useEffect(() => {
+    if (!IS_DESKTOP) {
+      return;
+    }
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey) || event.altKey) {
+        return;
+      }
+      const key = event.key.toLowerCase();
+      if (key === "s" && !event.shiftKey) {
+        event.preventDefault();
+        event.stopPropagation();
+        saveToCurrentFile();
+      } else if (key === "o" && !event.shiftKey) {
+        event.preventDefault();
+        event.stopPropagation();
+        openFileFromDisk();
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown, true);
+    const unsubscribe = window.electronAPI!.onOpenFile((filePath) => {
+      openFileByPath(filePath);
+    });
+
+    return () => {
+      window.removeEventListener("keydown", onKeyDown, true);
+      unsubscribe();
+    };
+  }, []);
+
+  // Ctrl+L：开关图层面板
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (
+        !(event.ctrlKey || event.metaKey) ||
+        event.altKey ||
+        event.shiftKey ||
+        event.key.toLowerCase() !== "l"
+      ) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      excalidrawAPI?.toggleSidebar({
+        name: LAYERS_SIDEBAR_NAME,
+        tab: LAYERS_TAB,
+      });
+    };
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
   }, [excalidrawAPI]);
 
   useEffect(() => {
@@ -371,6 +468,8 @@ const ExcalidrawWrapper = () => {
         handleKeyboardGlobally={true}
         autoFocus={true}
         theme="light"
+        UIOptions={APP_UI_OPTIONS}
+        renderTopRightUI={renderLayerTrigger}
         onLinkOpen={(element, event) => {
           if (element.link && isElementLink(element.link)) {
             event.preventDefault();
@@ -380,13 +479,12 @@ const ExcalidrawWrapper = () => {
       >
         <AppMainMenu />
         <AppWelcomeScreen />
+        <LayerSidebar excalidrawAPI={excalidrawAPI ?? null} />
         <OverwriteConfirmDialog>
           <OverwriteConfirmDialog.Actions.ExportToImage />
           <OverwriteConfirmDialog.Actions.SaveToDisk />
         </OverwriteConfirmDialog>
         <AppFooter onChange={() => excalidrawAPI?.refresh()} />
-
-        <TTDDialogTrigger />
 
         {localStorageQuotaExceeded && (
           <div className="alert alert--danger">

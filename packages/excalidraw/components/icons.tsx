@@ -1914,6 +1914,14 @@ export const laserPointerToolIcon = createIcon(
   20,
 );
 
+export const rulerToolIcon = createIcon(
+  <g strokeWidth={1.75}>
+    <rect x="2.5" y="8" width="19" height="8" rx="1.5" />
+    <path d="M6 8v3M9 8v2M12 8v3M15 8v2M18 8v3" />
+  </g>,
+  tablerIconProps,
+);
+
 export const MagicIcon = createIcon(
   <g stroke="currentColor" fill="none">
     <path stroke="none" d="M0 0h24v24H0z" />

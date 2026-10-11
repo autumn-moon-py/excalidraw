@@ -337,10 +337,7 @@ import { actions } from "../actions/register";
 import { getShortcutFromShortcutName } from "../actions/shortcuts";
 import { trackEvent } from "../analytics";
 import { AnimationFrameHandler } from "../animation-frame-handler";
-import {
-  getDefaultAppState,
-  isEraserActive,
-} from "../appState";
+import { getDefaultAppState, isEraserActive } from "../appState";
 import {
   copyTextToSystemClipboard,
   parseClipboard,
@@ -485,6 +482,7 @@ import type {
   GenerateDiagramToCode,
   NullableGridSize,
   Offsets,
+  RulerMeasurement,
 } from "../types";
 import type { RoughCanvas } from "roughjs/bin/canvas";
 import type { Action, ActionResult } from "../actions/types";
@@ -563,6 +561,7 @@ let isPanning: boolean = false;
 let isDraggingScrollBar: boolean = false;
 /** tracks whether right-click drag has moved enough to be considered panning */
 let rightClickPanningStarted: boolean = false;
+let rightClickDragOccurred: boolean = false;
 let rightClickStartX: number = 0;
 let rightClickStartY: number = 0;
 const RIGHT_CLICK_PAN_THRESHOLD = 3;
@@ -1201,6 +1200,46 @@ class App extends React.Component<AppProps, AppState> {
     return (
       isGridModeEnabled(this) ? this.state.gridSize : null
     ) as NullableGridSize;
+  };
+
+  // 量尺：格子模式下端点吸附格点/半格（格线中点），接近45度时吸附为精确对角线；
+  // 长度单位为网格1格，始终取整；按住Ctrl可临时自由测量
+  private getRulerMeasurement = (
+    origin: { x: number; y: number },
+    current: { x: number; y: number },
+    free: boolean,
+  ): RulerMeasurement => {
+    const grid = free ? null : this.getEffectiveGridSize();
+    const half = grid ? grid / 2 : null;
+    const snapCoord = (v: number) => (half ? Math.round(v / half) * half : v);
+
+    const startX = snapCoord(origin.x);
+    const startY = snapCoord(origin.y);
+    const endX = snapCoord(current.x);
+    const endY = snapCoord(current.y);
+
+    let snappedX = endX;
+    let snappedY = endY;
+    if (half) {
+      const adx = Math.abs(endX - startX);
+      const ady = Math.abs(endY - startY);
+      const max = Math.max(adx, ady);
+      const min = Math.min(adx, ady);
+      if (min > 0 && min >= max * 0.75) {
+        if (adx > ady) {
+          snappedY = startY + Math.sign(endY - startY) * adx;
+        } else {
+          snappedX = startX + Math.sign(endX - startX) * ady;
+        }
+      }
+    }
+
+    const distance = Math.hypot(snappedX - startX, snappedY - startY);
+    return {
+      start: [startX, startY],
+      end: [snappedX, snappedY],
+      length: Math.round(grid ? distance / grid : distance),
+    };
   };
 
   private getHTMLIFrameElement(
@@ -2057,9 +2096,9 @@ class App extends React.Component<AppProps, AppState> {
                           setAppState={this.setAppState}
                           actionManager={this.actionManager}
                           elements={this.scene.getNonDeletedElements()}
-                           onLockToggle={this.toggleLock}
-                           onPenModeToggle={this.togglePenMode}
-                           langCode={getLanguage().code}
+                          onLockToggle={this.toggleLock}
+                          onPenModeToggle={this.togglePenMode}
+                          langCode={getLanguage().code}
                           renderTopLeftUI={renderTopLeftUI}
                           renderTopRightUI={renderTopRightUI}
                           renderCustomStats={renderCustomStats}
@@ -5686,9 +5725,9 @@ class App extends React.Component<AppProps, AppState> {
 
     const elements = (
       opts?.includeBoundTextElement && opts?.includeLockedElements
-        ? this.scene.getNonDeletedElements()
+        ? this.scene.getVisibleElements()
         : this.scene
-            .getNonDeletedElements()
+            .getVisibleElements()
             .filter(
               (element) =>
                 (opts?.includeLockedElements || !element.locked) &&
@@ -5780,7 +5819,7 @@ class App extends React.Component<AppProps, AppState> {
   }
 
   private getTextBindableContainerAtPosition(x: number, y: number) {
-    const elements = this.scene.getNonDeletedElements();
+    const elements = this.scene.getVisibleElements();
     const selectedElements = this.scene.getSelectedElements(this.state);
     if (selectedElements.length === 1) {
       return isTextBindableContainer(selectedElements[0], false)
@@ -6193,7 +6232,7 @@ class App extends React.Component<AppProps, AppState> {
       return undefined;
     }
 
-    const elements = this.scene.getNonDeletedElements();
+    const elements = this.scene.getVisibleElements();
     let hitElementIndex = -1;
 
     for (let index = elements.length - 1; index >= 0; index--) {
@@ -6374,10 +6413,7 @@ class App extends React.Component<AppProps, AppState> {
           null;
     }
 
-    if (
-      isPanning ||
-      isDraggingScrollBar
-    ) {
+    if (isPanning || isDraggingScrollBar) {
       return;
     }
 
@@ -6405,14 +6441,14 @@ class App extends React.Component<AppProps, AppState> {
       isActiveToolNonLinearSnappable(this.state.activeTool.type)
     ) {
       const { originOffset, snapLines } = getSnapLinesAtPointer(
-        this.scene.getNonDeletedElements(),
+        this.scene.getVisibleElements(),
         this,
         {
           x: scenePointerX,
           y: scenePointerY,
         },
         event,
-        this.scene.getNonDeletedElementsMap(),
+        this.scene.getVisibleElementsMap(),
       );
 
       this.setState((prevState) => {
@@ -6716,7 +6752,7 @@ class App extends React.Component<AppProps, AppState> {
       return;
     }
 
-    const elements = this.scene.getNonDeletedElements();
+    const elements = this.scene.getVisibleElements();
 
     const selectedElements = this.scene.getSelectedElements(this.state);
     if (
@@ -7467,6 +7503,15 @@ class App extends React.Component<AppProps, AppState> {
         pointerDownState.lastCoords.x,
         pointerDownState.lastCoords.y,
       );
+    } else if (this.state.activeTool.type === "ruler") {
+      // 量尺：仅记录拖拽起点，不创建任何画布元素
+      this.setState({
+        rulerMeasurement: this.getRulerMeasurement(
+          pointerDownState.origin,
+          pointerDownState.origin,
+          !!event[KEYS.CTRL_OR_CMD],
+        ),
+      });
     } else if (
       this.state.activeTool.type !== "eraser" &&
       this.state.activeTool.type !== "hand" &&
@@ -7630,21 +7675,33 @@ class App extends React.Component<AppProps, AppState> {
     // right-click without drag to still show the context menu.
     if (event.button === POINTER_BUTTON.SECONDARY) {
       rightClickPanningStarted = false;
+      rightClickDragOccurred = false;
       rightClickStartX = event.clientX;
       rightClickStartY = event.clientY;
       setCursor(this.interactiveCanvas, CURSOR_TYPE.GRAB);
       this.focusContainer();
 
+      // Use active flag to prevent onPointerMove from executing after teardown
+      let isActive = true;
+
       const onPointerMove = withBatchedUpdatesThrottled((e: PointerEvent) => {
+        if (!isActive) {
+          return;
+        }
+
         const dx = Math.abs(e.clientX - rightClickStartX);
         const dy = Math.abs(e.clientY - rightClickStartY);
 
         if (!rightClickPanningStarted) {
-          if (dx < RIGHT_CLICK_PAN_THRESHOLD && dy < RIGHT_CLICK_PAN_THRESHOLD) {
+          if (
+            dx < RIGHT_CLICK_PAN_THRESHOLD &&
+            dy < RIGHT_CLICK_PAN_THRESHOLD
+          ) {
             return;
           }
           // threshold exceeded — start actual panning
           rightClickPanningStarted = true;
+          rightClickDragOccurred = true;
           isPanning = true;
           setCursor(this.interactiveCanvas, CURSOR_TYPE.GRABBING);
         }
@@ -7661,11 +7718,12 @@ class App extends React.Component<AppProps, AppState> {
       });
 
       const teardown = withBatchedUpdates(() => {
+        isActive = false;
         lastPointerUp = null;
-        if (rightClickPanningStarted) {
-          isPanning = false;
-        }
+        // Always reset panning state to prevent getting stuck
+        isPanning = false;
         rightClickPanningStarted = false;
+        rightClickDragOccurred = false;
         setCursorForShape(this.interactiveCanvas, this.state);
         this.setState({ cursorButton: "up" });
         this.savePointer(event.clientX, event.clientY, "up");
@@ -7677,7 +7735,9 @@ class App extends React.Component<AppProps, AppState> {
 
       lastPointerUp = teardown;
       window.addEventListener(EVENT.BLUR, teardown);
-      window.addEventListener(EVENT.POINTER_MOVE, onPointerMove, { passive: true });
+      window.addEventListener(EVENT.POINTER_MOVE, onPointerMove, {
+        passive: true,
+      });
       window.addEventListener(EVENT.POINTER_UP, teardown);
       return true;
     }
@@ -7927,7 +7987,7 @@ class App extends React.Component<AppProps, AppState> {
     pointerDownState: PointerDownState,
   ): boolean => {
     if (isSelectionLikeTool(this.state.activeTool.type)) {
-      const elements = this.scene.getNonDeletedElements();
+      const elements = this.scene.getVisibleElements();
       const elementsMap = this.scene.getNonDeletedElementsMap();
       const selectedElements = this.scene.getSelectedElements(this.state);
 
@@ -9196,6 +9256,17 @@ class App extends React.Component<AppProps, AppState> {
         this.laserTrails.addPointToPath(pointerCoords.x, pointerCoords.y);
       }
 
+      if (this.state.activeTool.type === "ruler") {
+        this.setState({
+          rulerMeasurement: this.getRulerMeasurement(
+            pointerDownState.origin,
+            pointerCoords,
+            !!event[KEYS.CTRL_OR_CMD],
+          ),
+        });
+        return;
+      }
+
       const [gridX, gridY] = getGridPoint(
         pointerCoords.x,
         pointerCoords.y,
@@ -9863,7 +9934,7 @@ class App extends React.Component<AppProps, AppState> {
       if (this.state.activeTool.type === "selection") {
         pointerDownState.boxSelection.hasOccurred = true;
 
-        const elements = this.scene.getNonDeletedElements();
+        const elements = this.scene.getVisibleElements();
 
         // box-select line editor points
         if (this.state.selectedLinearElement?.isEditing) {
@@ -10031,6 +10102,7 @@ class App extends React.Component<AppProps, AppState> {
         elementsToHighlight: null,
         cursorButton: "up",
         snapLines: updateStable(prevState.snapLines, []),
+        rulerMeasurement: null,
         originSnapOffset: null,
       }));
 
@@ -10941,6 +11013,11 @@ class App extends React.Component<AppProps, AppState> {
         return;
       }
 
+      // 量尺不产生元素，结束后保持工具激活以便连续测量
+      if (activeTool.type === "ruler") {
+        return;
+      }
+
       if (
         !activeTool.locked &&
         activeTool.type !== "freedraw" &&
@@ -11663,7 +11740,8 @@ class App extends React.Component<AppProps, AppState> {
     event.preventDefault();
 
     // If right-click drag resulted in panning, don't show context menu
-    if (rightClickPanningStarted || isPanning) {
+    if (rightClickDragOccurred || isPanning) {
+      rightClickDragOccurred = false;
       return;
     }
 
@@ -11692,7 +11770,13 @@ class App extends React.Component<AppProps, AppState> {
         selectedElements,
       );
 
-    const type = element || isHittingCommonBoundBox ? "element" : "canvas";
+    // Only show context menu when there are selected elements
+    // This prevents conflicts with right-click drag panning on empty canvas
+    if (selectedElements.length === 0) {
+      return;
+    }
+
+    const type = "element";
 
     const container = this.excalidrawContainerRef.current!;
     const { top: offsetTop, left: offsetLeft } =
@@ -12186,20 +12270,12 @@ class App extends React.Component<AppProps, AppState> {
         return;
       }
 
-      const { deltaX, deltaY } = event;
-      // scroll horizontally when shift pressed
-      if (event.shiftKey) {
-        this.translateCanvas(({ zoom, scrollX }) => ({
-          // on Mac, shift+wheel tends to result in deltaX
-          scrollX: scrollX - (deltaY || deltaX) / zoom.value,
-        }));
-        return;
-      }
+      const { deltaY } = event;
 
-      // default: wheel zooms canvas (10% step), Ctrl: fine zoom (1% step)
+      // 缩放步长：默认滚轮 5%，Shift 精细 1%，Ctrl 粗 10%
       const sign = Math.sign(deltaY);
       const isCtrl = event.metaKey || event.ctrlKey;
-      const step = isCtrl ? 0.01 : ZOOM_STEP;
+      const step = isCtrl ? ZOOM_STEP : event.shiftKey ? 0.01 : 0.05;
       const MAX_STEP = step * 100;
       const absDelta = Math.abs(deltaY);
       let delta = deltaY;

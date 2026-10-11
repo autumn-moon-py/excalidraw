@@ -78,6 +78,10 @@ type _ExcalidrawElementBase = Readonly<{
   updated: number;
   link: string | null;
   locked: boolean;
+  /** 图层面板：为 true 时元素在画布上不可见、不参与命中/框选/导出 */
+  hidden?: boolean;
+  /** 图层面板：自定义显示名（画框元素沿用自身的 name 字段） */
+  layerName?: string;
   customData?: Record<string, any>;
 }>;
 
