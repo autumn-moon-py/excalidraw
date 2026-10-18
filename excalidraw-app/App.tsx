@@ -244,6 +244,12 @@ const ExcalidrawWrapper = () => {
       if (isTestEnv()) {
         return;
       }
+      // 桌面端（exe）为纯文件模式：画布内容只来自磁盘文件，不参与浏览器缓存同步。
+      // 否则窗口重新获得焦点/恢复可见时，会用历史遗留的 localStorage 缓存（可能为空数组）
+      // 覆盖当前画布，表现为画布被一键清空
+      if (!LocalData.persistAppStateLocally) {
+        return;
+      }
       if (!document.hidden) {
         if (isBrowserStorageStateNewer(STORAGE_KEYS.VERSION_DATA_STATE)) {
           const localDataState = importFromLocalStorage();

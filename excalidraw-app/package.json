@@ -1,87 +1,87 @@
 {
-  "name": "excalidraw-app",
-  "version": "2.0.1",
-  "private": true,
-  "homepage": ".",
-  "main": "electron/main.js",
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not ie <= 11",
-      "not op_mini all",
-      "not safari < 12",
-      "not kaios <= 2.5",
-      "not edge < 79",
-      "not chrome < 70",
-      "not and_uc < 13",
-      "not samsung < 10"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
-  },
-  "engines": {
-    "node": ">=18.0.0"
-  },
-  "dependencies": {
-    "@excalidraw/random-username": "1.0.0",
-    "idb-keyval": "6.0.3",
-    "jotai": "2.11.0",
-    "react": "19.0.0",
-    "react-dom": "19.0.0",
-    "vite-plugin-html": "3.2.2"
-  },
-  "prettier": "@excalidraw/prettier-config",
-  "scripts": {
-    "build:app": "vite build",
-    "build:version": "node ../scripts/build-version.js",
-    "build": "yarn build:app && yarn build:version",
-    "electron:build": "vite build",
-    "electron:pack": "electron-builder --win nsis portable",
-    "start": "yarn && vite",
-    "start:production": "yarn build && yarn serve",
-    "serve": "npx http-server build -a localhost -p 5001 -o",
-    "build:preview": "yarn build && vite preview --port 5000"
-  },
-  "devDependencies": {
-    "electron": "32.2.7",
-    "electron-builder": "24.13.3"
-  },
-  "build": {
-    "appId": "com.excalidraw.app",
-    "productName": "Excalidraw",
-    "directories": {
-      "output": "dist-electron"
+    "name": "excalidraw-app",
+    "version": "2.0.6",
+    "private": true,
+    "homepage": ".",
+    "main": "electron/main.js",
+    "browserslist": {
+        "production": [
+            ">0.2%",
+            "not dead",
+            "not ie <= 11",
+            "not op_mini all",
+            "not safari < 12",
+            "not kaios <= 2.5",
+            "not edge < 79",
+            "not chrome < 70",
+            "not and_uc < 13",
+            "not samsung < 10"
+        ],
+        "development": [
+            "last 1 chrome version",
+            "last 1 firefox version",
+            "last 1 safari version"
+        ]
     },
-    "files": [
-      "build/**",
-      "electron/**",
-      "package.json"
-    ],
-    "asar": true,
-    "fileAssociations": [
-      {
-        "ext": "excalidraw",
-        "name": "Excalidraw.Document",
-        "description": "Excalidraw 画布文件",
-        "role": "Editor"
-      }
-    ],
-    "win": {
-      "target": [
-        "nsis",
-        "portable"
-      ]
+    "engines": {
+        "node": ">=18.0.0"
     },
-    "nsis": {
-      "oneClick": false,
-      "perMachine": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
+    "dependencies": {
+        "@excalidraw/random-username": "1.0.0",
+        "idb-keyval": "6.0.3",
+        "jotai": "2.11.0",
+        "react": "19.0.0",
+        "react-dom": "19.0.0",
+        "vite-plugin-html": "3.2.2"
+    },
+    "prettier": "@excalidraw/prettier-config",
+    "scripts": {
+        "build:app": "vite build",
+        "build:version": "node ../scripts/build-version.js",
+        "build": "yarn build:app && yarn build:version",
+        "electron:build": "vite build",
+        "electron:pack": "electron-builder --win nsis portable",
+        "start": "yarn && vite",
+        "start:production": "yarn build && yarn serve",
+        "serve": "npx http-server build -a localhost -p 5001 -o",
+        "build:preview": "yarn build && vite preview --port 5000"
+    },
+    "devDependencies": {
+        "electron": "32.2.7",
+        "electron-builder": "24.13.3"
+    },
+    "build": {
+        "appId": "com.excalidraw.app",
+        "productName": "Excalidraw",
+        "directories": {
+            "output": "dist-electron"
+        },
+        "files": [
+            "build/**",
+            "electron/**",
+            "package.json"
+        ],
+        "asar": true,
+        "fileAssociations": [
+            {
+                "ext": "excalidraw",
+                "name": "Excalidraw.Document",
+                "description": "Excalidraw 画布文件",
+                "role": "Editor"
+            }
+        ],
+        "win": {
+            "target": [
+                "nsis",
+                "portable"
+            ]
+        },
+        "nsis": {
+            "oneClick": false,
+            "perMachine": false,
+            "allowToChangeInstallationDirectory": true,
+            "createDesktopShortcut": true,
+            "createStartMenuShortcut": true
+        }
     }
-  }
 }

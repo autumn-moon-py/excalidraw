@@ -4,7 +4,7 @@ import {
 } from "@excalidraw/excalidraw/components/App";
 import { useUIAppState } from "@excalidraw/excalidraw/context/ui-appState";
 
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 
 import type { ExcalidrawElement } from "@excalidraw/element/types";
 import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
@@ -101,6 +101,22 @@ const ChevronIcon = ({ collapsed }: { collapsed: boolean }) => (
   </svg>
 );
 
+// 折叠状态按图层 id 记忆，跨会话保留（桌面端不持久化 appState，故单独存 localStorage）
+const COLLAPSED_STORAGE_KEY = "excalidraw-layers-collapsed";
+
+const loadCollapsed = (): Record<string, boolean> => {
+  try {
+    const raw = window.localStorage.getItem(COLLAPSED_STORAGE_KEY);
+    if (!raw) {
+      return {};
+    }
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+};
+
 const findSiblings = (
   tree: LayerNode[],
   nodeId: string,
@@ -117,6 +133,27 @@ const findSiblings = (
   return null;
 };
 
+// 自上而下取第一个被选中的图层，并带上祖先链（用于展开折叠项）
+const findSelectedLayer = (
+  nodes: LayerNode[],
+  selectedElementIds: Record<string, true>,
+  ancestors: LayerNode[] = [],
+): { node: LayerNode; ancestors: LayerNode[] } | null => {
+  for (const node of nodes) {
+    if (node.elementIds.some((id) => selectedElementIds[id])) {
+      return { node, ancestors };
+    }
+    const found = findSelectedLayer(node.children, selectedElementIds, [
+      ...ancestors,
+      node,
+    ]);
+    if (found) {
+      return found;
+    }
+  }
+  return null;
+};
+
 export const LayerPanel: React.FC<{
   excalidrawAPI: ExcalidrawImperativeAPI;
 }> = ({ excalidrawAPI }) => {
@@ -124,7 +161,20 @@ export const LayerPanel: React.FC<{
   const appState = useUIAppState();
   const setAppState = useExcalidrawSetAppState();
 
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [collapsed, setCollapsed] =
+    useState<Record<string, boolean>>(loadCollapsed);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(
+        COLLAPSED_STORAGE_KEY,
+        JSON.stringify(collapsed),
+      );
+    } catch {
+      // 忽略存储失败（如隐私模式或配额不足）
+    }
+  }, [collapsed]);
+
   const [editingId, setEditingId] = useState<string | null>(null);
   const [menu, setMenu] = useState<{
     x: number;
@@ -181,6 +231,42 @@ export const LayerPanel: React.FC<{
 
   const toggleLocked = (node: LayerNode) =>
     setElementsLocked(excalidrawAPI, node.elementIds, !node.locked);
+
+  // F2：对当前选中图层进入重命名编辑态（面板关闭即卸载，无需额外判断）
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "F2" || event.repeat) {
+        return;
+      }
+      const target = event.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+      if (editingId) {
+        return;
+      }
+      const found = findSelectedLayer(tree, appState.selectedElementIds);
+      if (!found) {
+        return;
+      }
+      event.preventDefault();
+      setCollapsed((prev) => {
+        const next = { ...prev };
+        for (const ancestor of found.ancestors) {
+          delete next[ancestor.id];
+        }
+        return next;
+      });
+      setEditingId(found.node.id);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [tree, appState.selectedElementIds, editingId]);
 
   // 分组名称存在 appState.groupNames（随文件导出），其余元素写在自身字段上
   const commitRename = (node: LayerNode, value: string) => {

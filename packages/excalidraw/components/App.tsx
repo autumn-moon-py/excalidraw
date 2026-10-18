@@ -1202,7 +1202,7 @@ class App extends React.Component<AppProps, AppState> {
     ) as NullableGridSize;
   };
 
-  // 量尺：格子模式下端点吸附格点/半格（格线中点），接近45度时吸附为精确对角线；
+  // 量尺：格子模式下端点吸附到格子中心点（每格正中），接近45度时吸附为精确对角线；
   // 长度单位为网格1格，始终取整；按住Ctrl可临时自由测量
   private getRulerMeasurement = (
     origin: { x: number; y: number },
@@ -1210,8 +1210,9 @@ class App extends React.Component<AppProps, AppState> {
     free: boolean,
   ): RulerMeasurement => {
     const grid = free ? null : this.getEffectiveGridSize();
-    const half = grid ? grid / 2 : null;
-    const snapCoord = (v: number) => (half ? Math.round(v / half) * half : v);
+    // 吸附到最近的格子中心（格线交点为格子角，中心点坐标为 (n + 0.5) * grid）
+    const snapCoord = (v: number) =>
+      grid ? (Math.round(v / grid - 0.5) + 0.5) * grid : v;
 
     const startX = snapCoord(origin.x);
     const startY = snapCoord(origin.y);
@@ -1220,7 +1221,7 @@ class App extends React.Component<AppProps, AppState> {
 
     let snappedX = endX;
     let snappedY = endY;
-    if (half) {
+    if (grid) {
       const adx = Math.abs(endX - startX);
       const ady = Math.abs(endY - startY);
       const max = Math.max(adx, ady);
@@ -12272,24 +12273,11 @@ class App extends React.Component<AppProps, AppState> {
 
       const { deltaY } = event;
 
-      // 缩放步长：默认滚轮 5%，Shift 精细 1%，Ctrl 粗 10%
-      const sign = Math.sign(deltaY);
+      // 缩放步长：鼠标滚轮每格固定 5%，Shift 精细 1%，Ctrl 粗 10%
       const isCtrl = event.metaKey || event.ctrlKey;
       const step = isCtrl ? ZOOM_STEP : event.shiftKey ? 0.01 : 0.05;
-      const MAX_STEP = step * 100;
-      const absDelta = Math.abs(deltaY);
-      let delta = deltaY;
-      if (absDelta > MAX_STEP) {
-        delta = MAX_STEP * sign;
-      }
 
-      let newZoom = this.state.zoom.value - delta * step;
-      // increase zoom steps the more zoomed-in we are (applies to >100% only)
-      newZoom +=
-        Math.log10(Math.max(1, this.state.zoom.value)) *
-        -sign *
-        // reduced amplification for small deltas (small movements on a trackpad)
-        Math.min(1, absDelta / 20);
+      const newZoom = this.state.zoom.value - Math.sign(deltaY) * step;
 
       this.translateCanvas((state) => ({
         ...getStateForZoom(
