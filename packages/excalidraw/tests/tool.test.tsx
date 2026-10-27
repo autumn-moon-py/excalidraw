@@ -4,7 +4,7 @@ import { resolvablePromise } from "@excalidraw/common";
 
 import { Excalidraw } from "../index";
 
-import { Pointer } from "./helpers/ui";
+import { Keyboard, Pointer } from "./helpers/ui";
 import { act, render } from "./test-utils";
 
 import type { ExcalidrawImperativeAPI } from "../types";
@@ -55,6 +55,32 @@ describe("setActiveTool()", () => {
     mouse.up(20, 20);
 
     expect(h.state.activeTool.type).toBe("rectangle");
+  });
+
+  it("should keep the shape tool active when ctrl is held on pointer up", async () => {
+    act(() => {
+      excalidrawAPI.setActiveTool({ type: "rectangle" });
+    });
+
+    Keyboard.withModifierKeys({ ctrl: true }, () => {
+      mouse.down(10, 10);
+      mouse.up(20, 20);
+    });
+
+    expect(h.state.activeTool.type).toBe("rectangle");
+  });
+
+  it("should keep the linear tool active when ctrl is held on pointer up", async () => {
+    act(() => {
+      excalidrawAPI.setActiveTool({ type: "arrow" });
+    });
+
+    Keyboard.withModifierKeys({ ctrl: true }, () => {
+      mouse.down(10, 10);
+      mouse.up(20, 20);
+    });
+
+    expect(h.state.activeTool.type).toBe("arrow");
   });
 
   it("should set custom tool", async () => {

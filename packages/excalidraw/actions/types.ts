@@ -112,6 +112,7 @@ export type ActionName =
   | "distributeVertically"
   | "flipHorizontal"
   | "flipVertical"
+  | "resetRotation"
   | "viewMode"
   | "exportWithDarkMode"
   | "toggleTheme"

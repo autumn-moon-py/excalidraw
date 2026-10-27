@@ -106,7 +106,10 @@ export default defineConfig(({ mode }) => {
       react(),
       checker({
         typescript: true,
-        eslint: { lintCommand: 'eslint "./**/*.{js,ts,tsx}"' },
+        eslint: {
+          lintCommand:
+            'eslint "./**/*.{js,ts,tsx}" --ignore-pattern "build/**" --ignore-pattern "dist-electron/**"',
+        },
         overlay: {
           initialIsOpen: false,
           badgeStyle: "margin-bottom: 4rem; margin-left: 1rem",

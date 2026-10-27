@@ -1,0 +1,27 @@
+.dice-output-panel {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  // 高于 Excalidraw 底部 UI（z-index 60），低于弹窗
+  z-index: 65;
+  box-sizing: border-box;
+  width: 280px;
+  height: 130px;
+  padding: 8px 10px;
+  overflow-y: auto;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.53);
+  // 纯展示，不拦截画布操作
+  pointer-events: none;
+
+  &__item {
+    margin-bottom: 4px;
+    font-family: var(--ui-font), "Microsoft YaHei", sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.35;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    text-shadow: 1px 1px 6px rgba(0, 0, 0, 0.67);
+  }
+}

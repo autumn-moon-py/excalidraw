@@ -46,6 +46,7 @@ import { STORAGE_KEYS, SYNC_BROWSER_TABS_TIMEOUT } from "./app_constants";
 import { AppFooter } from "./components/AppFooter";
 import { AppMainMenu } from "./components/AppMainMenu";
 import { AppWelcomeScreen } from "./components/AppWelcomeScreen";
+import DiceOutputPanel from "./components/DiceOutputPanel";
 import { TopErrorBoundary } from "./components/TopErrorBoundary";
 
 import {
@@ -69,7 +70,6 @@ import DebugCanvas, {
 import {
   getSceneFromLaunchFile,
   isDesktopApp,
-  openFileByPath,
   openFileFromDisk,
   saveToCurrentFile,
   setExcalidrawAPI,
@@ -326,7 +326,7 @@ const ExcalidrawWrapper = () => {
     };
   }, [excalidrawAPI]);
 
-  // 桌面端：Ctrl+S 保存回原文件，Ctrl+O 原生打开，并响应再次双击文件
+  // 桌面端：Ctrl+S 保存回原文件，Ctrl+O 原生打开
   useEffect(() => {
     if (!IS_DESKTOP) {
       return;
@@ -349,13 +349,9 @@ const ExcalidrawWrapper = () => {
     };
 
     window.addEventListener("keydown", onKeyDown, true);
-    const unsubscribe = window.electronAPI!.onOpenFile((filePath) => {
-      openFileByPath(filePath);
-    });
 
     return () => {
       window.removeEventListener("keydown", onKeyDown, true);
-      unsubscribe();
     };
   }, []);
 
@@ -463,7 +459,10 @@ const ExcalidrawWrapper = () => {
   const localStorageQuotaExceeded = useAtomValue(localStorageQuotaExceededAtom);
 
   return (
-    <div style={{ height: "100%" }} className="excalidraw-app">
+    <div
+      style={{ height: "100%", position: "relative" }}
+      className="excalidraw-app"
+    >
       <Excalidraw
         excalidrawAPI={excalidrawRefCallback}
         onChange={onChange}
@@ -512,6 +511,7 @@ const ExcalidrawWrapper = () => {
           />
         )}
       </Excalidraw>
+      <DiceOutputPanel />
     </div>
   );
 };

@@ -304,6 +304,7 @@ import {
   actionFinalize,
   actionFlipHorizontal,
   actionFlipVertical,
+  actionResetRotation,
   actionGroup,
   actionPasteStyles,
   actionSelectAll,
@@ -10410,7 +10411,7 @@ class App extends React.Component<AppProps, AppState> {
             });
           }
           this.setState({ suggestedBinding: null, startBoundElement: null });
-          if (!activeTool.locked) {
+          if (!activeTool.locked && !childEvent.ctrlKey) {
             resetCursor(this.interactiveCanvas);
             this.setState((prevState) => ({
               newElement: null,
@@ -11021,6 +11022,8 @@ class App extends React.Component<AppProps, AppState> {
 
       if (
         !activeTool.locked &&
+        // 按住 Ctrl 结束创建时保留当前工具，便于连续绘制
+        !childEvent.ctrlKey &&
         activeTool.type !== "freedraw" &&
         (activeTool.type !== "lasso" ||
           // if lasso is turned on but from selection => reset to selection
@@ -12235,6 +12238,7 @@ class App extends React.Component<AppProps, AppState> {
       CONTEXT_MENU_SEPARATOR,
       actionFlipHorizontal,
       actionFlipVertical,
+      actionResetRotation,
       CONTEXT_MENU_SEPARATOR,
       actionToggleLinearEditor,
       CONTEXT_MENU_SEPARATOR,

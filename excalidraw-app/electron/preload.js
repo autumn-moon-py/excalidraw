@@ -9,9 +9,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
   openFile: () => ipcRenderer.invoke("excalidraw:open-dialog"),
   saveFileDialog: (defaultName) =>
     ipcRenderer.invoke("excalidraw:save-dialog", defaultName),
-  onOpenFile: (callback) => {
-    const listener = (_event, filePath) => callback(filePath);
-    ipcRenderer.on("excalidraw:open-file", listener);
-    return () => ipcRenderer.removeListener("excalidraw:open-file", listener);
+  onDiceOutput: (callback) => {
+    const listener = (_event, messages) => callback(messages);
+    ipcRenderer.on("excalidraw:dice-output", listener);
+    return () => ipcRenderer.removeListener("excalidraw:dice-output", listener);
   },
 });

@@ -97,19 +97,6 @@ export const openFileFromDisk = async () => {
   }
 };
 
-/** 按路径加载文件（双击关联文件 / 第二实例传入） */
-export const openFileByPath = async (filePath: string) => {
-  if (!isDesktopApp() || !excalidrawAPI) {
-    return;
-  }
-  try {
-    const payload = await window.electronAPI!.readFile(filePath);
-    await applyScene(payload);
-  } catch (error) {
-    excalidrawAPI.setToast({ message: (error as Error).message });
-  }
-};
-
 /** 保存到当前文件；尚未关联文件时弹出另存为对话框 */
 export const saveToCurrentFile = async (): Promise<boolean> => {
   const api = excalidrawAPI;

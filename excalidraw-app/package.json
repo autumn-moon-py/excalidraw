@@ -1,6 +1,6 @@
 {
     "name": "excalidraw-app",
-    "version": "2.0.6",
+    "version": "2.0.12",
     "private": true,
     "homepage": ".",
     "main": "electron/main.js",
@@ -40,7 +40,8 @@
         "build:version": "node ../scripts/build-version.js",
         "build": "yarn build:app && yarn build:version",
         "electron:build": "vite build",
-        "electron:pack": "electron-builder --win nsis portable",
+        "electron:clean": "rimraf dist-electron",
+        "electron:pack": "yarn electron:clean && electron-builder --win nsis portable",
         "start": "yarn && vite",
         "start:production": "yarn build && yarn serve",
         "serve": "npx http-server build -a localhost -p 5001 -o",

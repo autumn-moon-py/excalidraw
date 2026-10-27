@@ -68,6 +68,8 @@ export {
 
 export { actionFlipHorizontal, actionFlipVertical } from "./actionFlip";
 
+export { actionResetRotation } from "./actionResetRotation";
+
 export {
   actionCopy,
   actionCut,

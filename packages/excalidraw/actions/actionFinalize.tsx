@@ -320,7 +320,9 @@ export const actionFinalize = register<FormData>({
         cursorButton: "up",
         activeTool:
           (appState.activeTool.locked ||
-            appState.activeTool.type === "freedraw") &&
+            appState.activeTool.type === "freedraw" ||
+            // 按住 Ctrl 结束创建时保留当前工具
+            data?.event?.ctrlKey) &&
           element
             ? appState.activeTool
             : activeTool,
